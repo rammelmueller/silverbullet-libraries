@@ -13,10 +13,10 @@ Track reminders on pages via `reminderDate`/`reminderTime` frontmatter and list 
 ## Usage
 
 * Run the **Reminder** command — the shipped page template creates a new page under `Reminder/<timestamp>` with the reminder frontmatter pre-filled.
-* Fill in `reminderDate` (format `YYYY-MM-DD`) and `reminderTime` (format `HH:MM`, defaults to `07:30`). Until both fields are set and parseable, the page is ignored.
+* New reminders default to **today at 00:00**, so they are due immediately. Set a `reminderDate` in the future (format `YYYY-MM-DD`) and `reminderTime` (format `HH:MM`) to schedule them; reminders without a title are listed under their page name.
 * Embed `${get_active_reminders()}` on any page — it renders all **due** reminders (their date/time has passed), ordered by `reminderDate`, with a link to the reminder page.
 
-> **note** Reminder pages carry the `reminder` tag. Any page tagged `reminder` with valid `reminderDate`/`reminderTime` fields counts — the template is just a convenience.
+> **note** Reminder pages carry the `reminder` tag. Any page tagged `reminder` with valid `reminderDate`/`reminderTime` fields counts — the template is just a convenience; pages with missing or unparseable fields are ignored.
 > Updating the library re-pulls the library page and the shipped template, overwriting local changes to them.
 
 ## Example Reminder Page
@@ -56,7 +56,7 @@ function get_active_reminders()
           }) < os.time()
     order by reminderDate
     select {
-      title = "[[" .. name .. "|" .. title .. "]]",
+      title = "[[" .. name .. "|" .. (title or name) .. "]]",
       due = reminderDate .. " / " .. reminderTime,
     }
   ]]

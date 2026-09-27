@@ -5,8 +5,8 @@ suggestedName: "Reminder/${os.date('%Y-%m-%d/%H-%M-%S')}"
 confirmName: false
 frontmatter: | 
   title: 
-  reminderDate: 
-  reminderTime: 07:30
+  reminderDate: ${date.today()}
+  reminderTime: 00:00
   creationDate: ${date.today()}
   tags: 
   - reminder
