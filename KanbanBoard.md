@@ -153,8 +153,6 @@ taskID: P-17
 .kanban-column {
   flex: 1;
   min-width: 250px;
-  max-width: 500px;
-  flex-shrink: 0;
   background: oklch(from var(--modal-help-background-color) l c h / 0.4);
   border-radius: 18px;
   padding: 10px;
