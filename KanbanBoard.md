@@ -11,20 +11,20 @@ Cards are whole pages; the columns are driven by a frontmatter attribute (typica
 
 ## DEMO WIDGET
 ${KanbanBoard(
-  query[[from index.tag "page"]], 
+  query[[from item = index.tag "page" where table.includes(item.tags, "task")]], 
   {
     {"Column", "status"},
     {"Columns", {
-      {"todo", "📥 To Do","purple"},
-      {"doing", "⏳ In Progress","blue"},
-      {"review", "👀 Needs Review","orange"},
+      {"open", "📥 To Do","purple"},
+      {"waiting", "⏳ In Progress","blue"},
+      {"in progress", "👀 Needs Review","orange"},
       {"done", "✅ Done","green"}
     }},
-    {"Tags", {"kanban"}}
+    {"Tags", {"personal"}}
   }
 )}
 
-Pages tagged `kanban` in their frontmatter appear on this board. Drag a card to another column to update the page's `status`.
+Pages tagged `task` and `personal` in their frontmatter appear on this board. Drag a card to another column to update the page's `status`.
 
 ## How it Works
 
