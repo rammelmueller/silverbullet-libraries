@@ -44,6 +44,20 @@ ${ReminderWall()}
    Reminder Wall (sticky notes)
 ---------------------------------- */
 
+/* Move SilverBullet's widget button bar out of the box (above it), so it
+   does not cover the wall's snooze toggle in the top right corner;
+   same approach as the Kanban board */
+#sb-main .cm-editor .sb-lua-directive-block:has(.rem-wall) .button-bar {
+  top: -40px;
+  padding: 0;
+  border-radius: 2em;
+  opacity: 0.2;
+  transition: all 0.5s ease;
+}
+#sb-main .cm-editor .sb-lua-directive-block:has(.rem-wall) .button-bar:hover {
+  opacity: 1;
+}
+
 .rem-controls {
   display: flex;
   justify-content: flex-end;
