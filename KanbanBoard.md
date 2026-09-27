@@ -41,6 +41,7 @@ You can define the columns and their corresponding status values in the widget's
 - **Customisable columns** — define your own workflow stages with labels, emoji, and optional accent colours per column
 - **Custom card fields** — choose which frontmatter attributes are shown on each card (`Fields`)
 - **Short card names** — cards display only the file name (the part after the last `/` of the page name, e.g. `task/buy-milk` shows as `buy-milk`); links still open the full page
+- **Snooze support** — pages whose `snoozeDate` frontmatter date lies in the future are hidden from the board; the ⏰ button toggles them into view
 - **HideKeys** — display an attribute value without showing its label (handy for IDs or long text)
 - **Mobile-friendly** — columns hold their minimum width and the board scrolls horizontally on narrow screens instead of squishing
 
@@ -63,6 +64,20 @@ You can define the columns and their corresponding status values in the widget's
     *   **`Tags`**: (Optional) A list of tags. A page must carry **all** of them in its frontmatter to appear on this board.
     *   **`Fields`**: (Optional) A list of frontmatter attributes to display on the card. E.g. `{"due", "priority"}`.
     *   **`HideKeys`**: (Optional) Hide certain attribute keys/labels from the card. This can be useful if you have a longer text or a title as attribute and want to display the whole thing.
+
+### Snoozed pages
+
+Pages with a `snoozeDate` frontmatter field are hidden from the board until that date is reached (they reappear on the morning of the snooze date). Set `snoozeDate: none` — or omit the field — for pages that should always be visible.
+
+```yaml
+---
+status: open
+tags: task, personal
+snoozeDate: 2026-03-02
+---
+```
+
+The ⏰ button in the board's top bar reveals snoozed pages temporarily; the toggle state is kept for the session and survives widget re-renders. Snoozed pages are excluded from the column counts while hidden.
 
 ### Widget example
 
@@ -200,6 +215,45 @@ taskID: P-17
 
 
 /* ---------------------------------
+   Snooze Toggle
+---------------------------------- */
+
+.kanban-controls {
+  display: flex;
+  justify-content: flex-end;
+  padding: 0 10px;
+}
+
+.kanban-snooze-toggle-btn {
+  padding: 4px 10px;
+  border-radius: 8px;
+  border: 1px solid var(--modal-border-color);
+  background: var(--modal-background-color);
+  color: var(--text-muted);
+  font-size: 0.85em;
+  cursor: pointer;
+  transition: all 0.2s;
+  line-height: normal;
+  flex-shrink: 0;
+}
+
+.kanban-snooze-toggle-btn:hover,
+.kanban-snooze-toggle-btn.active {
+  background: var(--ui-accent-color);
+  color: var(--modal-selected-option-color);
+}
+
+.kanban-snooze-toggle-btn:active {
+  opacity: 0.7;
+}
+
+/* Snoozed cards are hidden unless the board carries the show-snoozed class */
+.kanban-board:not(.show-snoozed) .kanban-card[data-snoozed="true"] {
+  display: none;
+}
+
+
+/* ---------------------------------
    Column Card Colors (optional accent color per column)
 ---------------------------------- */
 
@@ -321,6 +375,22 @@ function KanbanBoard(pageQuery, options)
         return s
     end
 
+    -- A page is snoozed while its snoozeDate frontmatter field (YYYY-MM-DD)
+    -- lies in the future. A missing, empty or "none" value — or anything that
+    -- does not parse as a date — means the page is not snoozed.
+    local function isSnoozed(p)
+        local sd = p.snoozeDate
+        if sd == nil then return false end
+        sd = tostring(sd)
+        if sd == "" or sd:lower() == "none" then return false end
+        local y = tonumber(sd:sub(1, 4))
+        local m = tonumber(sd:sub(6, 7))
+        local d = tonumber(sd:sub(9, 10))
+        if y == nil or m == nil or d == nil then return false end
+        local snoozeTime = os.time({ year = y, month = m, day = d, hour = 0, min = 0 })
+        return snoozeTime >= os.time()
+    end
+
     local statusKey = "status"
     local columnOrder = {}
     local columnTitles = {}
@@ -403,12 +473,36 @@ function KanbanBoard(pageQuery, options)
     -- below) operates on any board instance purely from the DOM. This keeps
     -- drag & drop working even when SilverBullet re-renders or replaces this
     -- widget's DOM without re-invoking this Lua function.
+    local showSnoozed = (js.window._kanbanShowSnoozed == true)
+
+    -- Snooze toggle button; its state persists in the browser window so it
+    -- survives widget re-renders (e.g. after a drag & drop frontmatter update)
+    local snoozeBtnClass = "kanban-snooze-toggle-btn"
+    local snoozeBtnTitle = "Show snoozed tasks"
+    if showSnoozed then
+        snoozeBtnClass = snoozeBtnClass .. " active"
+        snoozeBtnTitle = "Hide snoozed tasks"
+    end
+
     local html = '<div data-kanban-root="true" data-status-key="' .. statusKey .. '">'
-    html = html .. '<div class="kanban-board">'
+    html = html .. '<div class="kanban-controls"><button class="' .. snoozeBtnClass .. '" title="' .. snoozeBtnTitle .. '">⏰</button></div>'
+    html = html .. '<div class="kanban-board' .. (showSnoozed and ' show-snoozed' or '') .. '">'
 
     for _, status in ipairs(columnOrder) do
         local title = columnTitles[status]
         local pages = pagesByStatus[status]
+
+        -- Column count reflects what is visible: snoozed pages are hidden
+        -- unless the toggle has been switched on
+        local visibleCount = #pages
+        if not showSnoozed then
+            visibleCount = 0
+            for _, pg in ipairs(pages) do
+                if not isSnoozed(pg) then
+                    visibleCount = visibleCount + 1
+                end
+            end
+        end
 
         -- Build optional color class and inline CSS variable for this column
         local colorAttr = ""
@@ -417,7 +511,7 @@ function KanbanBoard(pageQuery, options)
         end
 
         html = html .. '<div class="kanban-column' .. colorAttr .. '" data-status="' .. status .. '">'
-        html = html .. '<div class="kanban-column-title">' .. title .. ' (<span class="kanban-col-count">' .. #pages .. '</span>)</div>'
+        html = html .. '<div class="kanban-column-title">' .. title .. ' (<span class="kanban-col-count">' .. visibleCount .. '</span>)</div>'
         html = html .. '<div class="kanban-cards">'
 
         for _, p in ipairs(pages) do
@@ -432,7 +526,8 @@ function KanbanBoard(pageQuery, options)
             displayNameEsc = displayNameEsc:gsub('<', '&lt;')
             displayNameEsc = displayNameEsc:gsub('>', '&gt;')
 
-            html = html .. '<div class="kanban-card" draggable="true" data-page="' .. pageNameEsc .. '">'
+            html = html .. '<div class="kanban-card" draggable="true" data-page="' .. pageNameEsc .. '"' ..
+                (isSnoozed(p) and ' data-snoozed="true"' or '') .. '>'
 
             -- Clickable Title (link and tooltip keep the full page name)
             html = html .. '<a class="kanban-card-name" draggable="false" href="/' .. pageNameEsc .. '" data-ref="/' .. pageNameEsc .. '" title="' .. pageNameEsc .. '">' .. displayNameEsc .. '</a>'
@@ -531,9 +626,17 @@ function KanbanBoard(pageQuery, options)
         let dragTimer = null;
         let touchStartX, touchStartY;
 
+        // Column counts reflect what is visible: snoozed cards are hidden
+        // (via CSS) unless the board carries the show-snoozed class
         const recount = (column) => {
             const countEl = column.querySelector('.kanban-col-count');
-            if (countEl) countEl.textContent = column.querySelectorAll('.kanban-card').length;
+            if (!countEl) return;
+            const board = column.closest('.kanban-board');
+            const showSnoozed = board && board.classList.contains('show-snoozed');
+            const selector = showSnoozed
+                ? '.kanban-card'
+                : '.kanban-card:not([data-snoozed="true"])';
+            countEl.textContent = column.querySelectorAll(selector).length;
         };
 
         const dispatchMove = (root, card, column) => {
@@ -632,6 +735,25 @@ function KanbanBoard(pageQuery, options)
             if (root && column) dispatchMove(root, draggedCard, column);
             draggedCard = null;
             sourceColumn = null;
+        });
+
+        // Snooze toggle: reveal/hide snoozed cards (hidden via CSS) and
+        // persist the state so it survives widget re-renders. The state is
+        // read by the Lua side on the next render.
+        document.addEventListener("click", (e) => {
+            const toggleBtn = e.target.closest ? e.target.closest('.kanban-snooze-toggle-btn') : null;
+            if (!toggleBtn) return;
+            e.preventDefault();
+            const root = getRoot(toggleBtn);
+            if (!root) return;
+            const board = root.querySelector('.kanban-board');
+            if (!board) return;
+            board.classList.toggle('show-snoozed');
+            const showSnoozed = board.classList.contains('show-snoozed');
+            window._kanbanShowSnoozed = showSnoozed;
+            toggleBtn.classList.toggle('active', showSnoozed);
+            toggleBtn.title = showSnoozed ? "Hide snoozed tasks" : "Show snoozed tasks";
+            root.querySelectorAll('.kanban-column').forEach(recount);
         });
     })();
     ]]
