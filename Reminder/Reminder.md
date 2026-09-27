@@ -118,7 +118,10 @@ ${ReminderWall()}
   width: 150px;
   height: auto;
   margin-bottom: 8px;
-  opacity: 0.8;
+  /* pencil-style line art: strokes use currentColor, so the drawing takes
+     the same muted color as the subtext below */
+  color: var(--text-muted);
+  opacity: 0.75;
 }
 
 .rem-empty-sub {
@@ -475,21 +478,31 @@ function ReminderWall(reminderQuery)
             emptyAttrs = ' data-has-hidden="true"'
         end
         html = html .. '<div class="rem-empty"' .. emptyAttrs .. '>'
-        html = html .. '<svg class="rem-empty-art" viewBox="0 0 220 150" xmlns="http://www.w3.org/2000/svg">'
-        html = html .. '<text x="182" y="34" font-size="20" fill="currentColor" opacity="0.45">Z</text>'
-        html = html .. '<text x="197" y="21" font-size="14" fill="currentColor" opacity="0.35">z</text>'
-        html = html .. '<text x="207" y="11" font-size="10" fill="currentColor" opacity="0.25">z</text>'
-        html = html .. '<path d="M72 40 L64 12 L94 28 Z" fill="#2e6b63"/>'
-        html = html .. '<path d="M148 40 L156 12 L126 28 Z" fill="#2e6b63"/>'
-        html = html .. '<ellipse cx="110" cy="85" rx="75" ry="62" fill="#2e6b63"/>'
-        html = html .. '<ellipse cx="110" cy="78" rx="48" ry="34" fill="#f2e3c2"/>'
-        html = html .. '<path d="M76 66 q11 10 22 0" stroke="#3f3a33" stroke-width="3" fill="none" stroke-linecap="round"/>'
-        html = html .. '<path d="M122 66 q11 10 22 0" stroke="#3f3a33" stroke-width="3" fill="none" stroke-linecap="round"/>'
-        html = html .. '<ellipse cx="110" cy="77" rx="5" ry="3.5" fill="#3f3a33"/>'
-        html = html .. '<ellipse cx="110" cy="93" rx="7" ry="5" fill="#3f3a33"/>'
-        html = html .. '<ellipse cx="110" cy="122" rx="44" ry="25" fill="#f2e3c2"/>'
-        html = html .. '<circle cx="70" cy="116" r="12" fill="#2e6b63"/>'
-        html = html .. '<circle cx="150" cy="116" r="12" fill="#2e6b63"/>'
+        -- Pencil-style sleeping Snorlax: line art only, inheriting the
+        -- muted text color of the container
+        html = html .. '<svg class="rem-empty-art" viewBox="0 0 220 150" xmlns="http://www.w3.org/2000/svg" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round">'
+        html = html .. '<text x="182" y="34" font-size="20" fill="currentColor" stroke="none" opacity="0.5">Z</text>'
+        html = html .. '<text x="197" y="21" font-size="14" fill="currentColor" stroke="none" opacity="0.38">z</text>'
+        html = html .. '<text x="207" y="11" font-size="10" fill="currentColor" stroke="none" opacity="0.26">z</text>'
+        html = html .. '<path d="M72 40 L64 12 L94 28 Z" stroke-width="3"/>'
+        html = html .. '<path d="M148 40 L156 12 L126 28 Z" stroke-width="3"/>'
+        html = html .. '<ellipse cx="110" cy="85" rx="75" ry="62" stroke-width="3"/>'
+        html = html .. '<ellipse cx="110" cy="78" rx="48" ry="34" stroke-width="2.5"/>'
+        html = html .. '<path d="M76 66 q11 10 22 0" stroke-width="3"/>'
+        html = html .. '<path d="M122 66 q11 10 22 0" stroke-width="3"/>'
+        html = html .. '<path d="M107 77 L113 77 L110 81 Z" stroke-width="2"/>'
+        html = html .. '<ellipse cx="110" cy="93" rx="7" ry="5" stroke-width="2.5"/>'
+        html = html .. '<ellipse cx="110" cy="120" rx="44" ry="23" stroke-width="3"/>'
+        html = html .. '<circle cx="70" cy="112" r="12" stroke-width="3"/>'
+        html = html .. '<path d="M66 105 L66 111" stroke-width="2"/>'
+        html = html .. '<path d="M72 104 L72 110" stroke-width="2"/>'
+        html = html .. '<circle cx="150" cy="112" r="12" stroke-width="3"/>'
+        html = html .. '<path d="M148 105 L148 111" stroke-width="2"/>'
+        html = html .. '<path d="M154 104 L154 110" stroke-width="2"/>'
+        html = html .. '<path d="M52 75 q-4 10 0 20" stroke-width="2" opacity="0.7"/>'
+        html = html .. '<path d="M60 62 q-4 8 -1 16" stroke-width="2" opacity="0.7"/>'
+        html = html .. '<path d="M168 75 q4 10 0 20" stroke-width="2" opacity="0.7"/>'
+        html = html .. '<path d="M160 62 q4 8 1 16" stroke-width="2" opacity="0.7"/>'
         html = html .. '</svg>'
         html = html .. '<div class="rem-empty-text">No reminders due</div>'
         html = html .. '<div class="rem-empty-sub">Shh... Snorlax is sleeping.</div>'
