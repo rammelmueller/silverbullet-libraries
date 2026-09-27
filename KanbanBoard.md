@@ -38,7 +38,7 @@ You can define the columns and their corresponding status values in the widget's
 - **Pages instead of tasks** — cards are whole pages; the column attribute and all card fields are read from frontmatter
 - **Drag & drop** — move cards between columns; the status attribute is updated directly in the page's frontmatter, creating a frontmatter block if the page has none yet
 - **Tag filter** — restrict the board to pages carrying all of the given frontmatter tags (`Tags` option)
-- **Tag chips** — every tag found on the board's pages (except the `Tags`-option tags) appears as a toggleable chip in the top bar; switch one off to hide all pages carrying it
+- **Tag chips** — every tag found on the board's pages (except the `Tags`-option tags and tags carried by *all* pages) appears as a toggleable chip in the top bar; switch one off to hide all pages carrying it
 - **Customisable columns** — define your own workflow stages with labels, emoji, and optional accent colours per column
 - **Custom card fields** — choose which frontmatter attributes are shown on each card (`Fields`)
 - **Short card names** — cards display only the file name (the part after the last `/` of the page name, e.g. `task/buy-milk` shows as `buy-milk`); links still open the full page
@@ -84,7 +84,7 @@ The ⏰ button in the board's top bar reveals snoozed pages temporarily; the tog
 
 ### Tag chips
 
-All frontmatter tags found on the board's pages — except the ones required via the `Tags` option — appear as `#tag` chips in the board's top bar. Chips are toggles: every chip is on by default and its pages are visible; click a chip to hide every page carrying that tag (a page with several tags disappears as soon as any of its tags is toggled off). Chip-hidden pages are excluded from the column counts. Like the snooze toggle, the chip state is kept for the session, survives widget re-renders and is shared by all boards of the session.
+All frontmatter tags found on the board's pages — except the ones required via the `Tags` option and tags carried by *every* page (those carry no distinguishing information, e.g. a `task` tag the query already enforces) — appear as `#tag` chips in the board's top bar. Chips are toggles: every chip is on by default and its pages are visible; click a chip to hide every page carrying that tag (a page with several tags disappears as soon as any of its tags is toggled off). Chip-hidden pages are excluded from the column counts. Like the snooze toggle, the chip state is kept for the session, survives widget re-renders and is shared by all boards of the session.
 
 ### Widget example
 
@@ -587,17 +587,24 @@ function KanbanBoard(pageQuery, options)
 
     -- Collect the board's toggleable tag chips: every frontmatter tag across
     -- the board's pages (snoozed/hidden pages included, so the chip set stays
-    -- stable), except the tags required via the Tags option
-    local chipTagList = {}
-    local chipTagSeen = {}
+    -- stable), except the tags required via the Tags option and tags carried
+    -- by every page — those carry no distinguishing information (e.g. a
+    -- "task" tag that the query already enforces on all pages)
+    local totalPages = 0
+    local tagPageCount = {}
     for _, status in ipairs(columnOrder) do
         for _, pg in ipairs(pagesByStatus[status]) do
+            totalPages = totalPages + 1
             for _, tag in ipairs(pageTags(pg)) do
-                if not chipTagSeen[tag] and not requiredTagSet[tag] then
-                    chipTagSeen[tag] = true
-                    table.insert(chipTagList, tag)
-                end
+                tagPageCount[tag] = (tagPageCount[tag] or 0) + 1
             end
+        end
+    end
+
+    local chipTagList = {}
+    for tag, count in pairs(tagPageCount) do
+        if not requiredTagSet[tag] and count < totalPages then
+            table.insert(chipTagList, tag)
         end
     end
     table.sort(chipTagList)
