@@ -210,8 +210,12 @@ local function escapeLuaPattern(s)
 end
 
 -- ------------- Write a single key into a page's frontmatter -------------
--- (private to this library; the Kanban board ships its own independent copy)
-local function setFrontmatterValue(pageName, key, value)
+-- Deliberately a global function: the session-persistent event listener
+-- below resolves globals at call time, so a library update redefines this
+-- implementation and even a listener registered by an older library
+-- version immediately uses the current logic.
+-- (The Kanban board ships its own independent copy.)
+function reminderSetFrontmatter(pageName, key, value)
     local content = space.readPage(pageName)
     if not content then return end
 
@@ -337,18 +341,26 @@ local function overdueColorStyle(p)
     return ' style="background: linear-gradient(160deg, ' .. stop1 .. ', ' .. stop2 .. ')"'
 end
 
+-- Global snooze handler, redefined on every library evaluation. The
+-- listener registered below is a thin, stable shim that dispatches to this
+-- global, so library updates take effect in live sessions without a
+-- page reload.
+function reminderHandleSnooze(detail)
+    if detail and detail.action == "snooze" then
+        local value = tostring(detail.value or "")
+        if value == "" or value:lower() == "none" then
+            -- Clearing the picker makes the reminder due again today
+            value = os.date("%Y-%m-%d")
+        end
+        -- Snoozing a reminder means postponing its reminderDate
+        reminderSetFrontmatter(detail.page, "reminderDate", value)
+    end
+end
+
 -- ------------- Event Listeners -------------
 if not js.window.reminderWallListenersAdded then
     js.window.addEventListener("sb-reminder-snooze-update", function(e)
-        if e.detail and e.detail.action == "snooze" then
-            local value = tostring(e.detail.value or "")
-            if value == "" or value:lower() == "none" then
-                -- Clearing the picker makes the reminder due again today
-                value = os.date("%Y-%m-%d")
-            end
-            -- Snoozing a reminder means postponing its reminderDate
-            setFrontmatterValue(e.detail.page, "reminderDate", value)
-        end
+        reminderHandleSnooze(e.detail)
     end)
     js.window.reminderWallListenersAdded = true
 end
