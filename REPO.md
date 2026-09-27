@@ -1,3 +1,10 @@
+---
+name: "Repository/rammelmueller Repo"
+tags: meta/repository
+pageDecoration.prefix: "📚 "
+---
+
+### Tools
 ```#meta/library/remote
 name: "✅ Kanban Board"
 uri: github:rammelmueller/silverbullet-libraries/KanbanBoard.md
