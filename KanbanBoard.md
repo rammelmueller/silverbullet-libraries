@@ -224,6 +224,49 @@ taskID: P-17
 
 
 /* ---------------------------------
+   Column Empty State (Gengar placeholder)
+---------------------------------- */
+
+.kanban-col-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  flex-grow: 1;
+  width: 100%;
+  min-height: 100px;
+  padding: 16px 8px;
+  box-sizing: border-box;
+  color: var(--text-muted);
+  font-style: italic;
+  text-align: center;
+}
+
+/* The placeholder is hidden while the column has at least one visible
+   card — this reacts instantly to the snooze and tag-chip toggles, no
+   re-render needed */
+.kanban-cards:has(.kanban-card:not(.kanban-tag-hidden):not([data-snoozed="true"])) > .kanban-col-empty,
+.kanban-board.show-snoozed .kanban-cards:has(.kanban-card:not(.kanban-tag-hidden)) > .kanban-col-empty {
+  display: none;
+}
+
+.kanban-col-empty-art {
+  width: 110px;
+  height: auto;
+  margin-bottom: 8px;
+  /* pencil-style line art: strokes use currentColor, so the drawing takes
+     the same muted color as the text */
+  color: var(--text-muted);
+  opacity: 0.75;
+}
+
+.kanban-col-empty-sub {
+  font-size: 0.75em;
+  opacity: 0.75;
+}
+
+
+/* ---------------------------------
    Snooze Toggle
 ---------------------------------- */
 
@@ -839,6 +882,29 @@ function KanbanBoard(pageQuery, options)
 
             html = html .. '</div>' -- close kanban-card
         end
+
+        -- Empty-state placeholder: rendered in every column and hidden via
+        -- CSS while the column has at least one visible card (see the CSS
+        -- section), so it reacts instantly to the snooze and chip toggles
+        html = html .. '<div class="kanban-col-empty">'
+        html = html .. '<svg class="kanban-col-empty-art" viewBox="0 0 220 150" xmlns="http://www.w3.org/2000/svg" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round">'
+        html = html .. '<path d="M50 50 L38 22 L70 36 L78 12 L96 30 L110 8 L124 30 L142 12 L150 36 L182 22 L170 50 C185 75 180 115 155 130 C130 143 90 143 65 130 C40 115 35 75 50 50 Z" stroke-width="3"/>'
+        html = html .. '<path d="M78 62 q9 9 18 0" stroke-width="3"/>'
+        html = html .. '<path d="M124 62 q9 9 18 0" stroke-width="3"/>'
+        html = html .. '<path d="M72 80 C90 94 130 94 148 80" stroke-width="3"/>'
+        html = html .. '<path d="M88 86 L92 92 L96 88" stroke-width="2"/>'
+        html = html .. '<path d="M105 89 L109 95 L113 90" stroke-width="2"/>'
+        html = html .. '<path d="M122 86 L126 92 L130 88" stroke-width="2"/>'
+        html = html .. '<path d="M48 85 C36 92 36 106 50 110" stroke-width="3"/>'
+        html = html .. '<path d="M172 85 C184 92 184 106 170 110" stroke-width="3"/>'
+        html = html .. '<path d="M92 133 L92 141" stroke-width="3"/>'
+        html = html .. '<path d="M128 133 L128 141" stroke-width="3"/>'
+        html = html .. '<path d="M58 70 q-3 9 0 18" stroke-width="2" opacity="0.7"/>'
+        html = html .. '<path d="M162 70 q3 9 0 18" stroke-width="2" opacity="0.7"/>'
+        html = html .. '</svg>'
+        html = html .. '<div class="kanban-col-empty-text">Nothing going on</div>'
+        html = html .. '<div class="kanban-col-empty-sub">Just Gengar passing through.</div>'
+        html = html .. '</div>'
 
         html = html .. '</div></div>' -- close kanban-cards + kanban-column
     end
