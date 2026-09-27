@@ -2,8 +2,6 @@
 name: "Library/rammelmueller/Reminder"
 tags: meta/library
 pageDecoration.prefix: "⏰ "
-files:
-- ReminderTemplate.md
 ---
 
 # Reminder
