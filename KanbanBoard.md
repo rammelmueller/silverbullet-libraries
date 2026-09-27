@@ -315,10 +315,10 @@ end
 
 -- ------------- Main Kanban Board Function -------------
 function KanbanBoard(pageQuery, options)
-    -- Normalizes a tag: strips a leading '#', trims and lowercases
+    -- Normalizes a tag: strips a leading '#'
     local function normalizeTag(t)
         local s = tostring(t):gsub("^#", "")
-        return (s:gsub("^%s*(.-)%s*$", "%1"):lower())
+        return s
     end
 
     local statusKey = "status"
