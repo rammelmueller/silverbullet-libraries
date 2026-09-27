@@ -38,6 +38,7 @@ You can define the columns and their corresponding status values in the widget's
 - **Pages instead of tasks** — cards are whole pages; the column attribute and all card fields are read from frontmatter
 - **Drag & drop** — move cards between columns; the status attribute is updated directly in the page's frontmatter, creating a frontmatter block if the page has none yet
 - **Tag filter** — restrict the board to pages carrying all of the given frontmatter tags (`Tags` option)
+- **Tag chips** — every tag found on the board's pages (except the `Tags`-option tags) appears as a toggleable chip in the top bar; switch one off to hide all pages carrying it
 - **Customisable columns** — define your own workflow stages with labels, emoji, and optional accent colours per column
 - **Custom card fields** — choose which frontmatter attributes are shown on each card (`Fields`)
 - **Short card names** — cards display only the file name (the part after the last `/` of the page name, e.g. `task/buy-milk` shows as `buy-milk`); links still open the full page
@@ -80,6 +81,10 @@ snoozeDate: 2026-03-02
 ```
 
 The ⏰ button in the board's top bar reveals snoozed pages temporarily; the toggle state is kept for the session and survives widget re-renders. Snoozed pages are excluded from the column counts while hidden, and when revealed they are rendered in gray regardless of their column's accent color.
+
+### Tag chips
+
+All frontmatter tags found on the board's pages — except the ones required via the `Tags` option — appear as `#tag` chips in the board's top bar. Chips are toggles: every chip is on by default and its pages are visible; click a chip to hide every page carrying that tag (a page with several tags disappears as soon as any of its tags is toggled off). Chip-hidden pages are excluded from the column counts. Like the snooze toggle, the chip state is kept for the session, survives widget re-renders and is shared by all boards of the session.
 
 ### Widget example
 
@@ -223,8 +228,39 @@ taskID: P-17
 
 .kanban-controls {
   display: flex;
+  align-items: center;
+  flex-wrap: wrap;
   justify-content: flex-end;
+  gap: 6px;
   padding: 0 10px;
+}
+
+.kanban-tag-chips {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+  margin-right: auto; /* keeps the snooze button on the right */
+}
+
+.kanban-tag-chip {
+  padding: 2px 10px;
+  border-radius: 2em;
+  border: 1px solid var(--modal-border-color);
+  background: var(--modal-background-color);
+  color: var(--text-muted);
+  font-size: 0.8em;
+  cursor: pointer;
+  transition: all 0.2s;
+  line-height: normal;
+}
+
+.kanban-tag-chip.active {
+  background: var(--ui-accent-color);
+  color: var(--modal-selected-option-color);
+}
+
+.kanban-tag-chip:hover {
+  opacity: 0.8;
 }
 
 .kanban-snooze-toggle-btn {
@@ -252,6 +288,11 @@ taskID: P-17
 
 /* Snoozed cards are hidden unless the board carries the show-snoozed class */
 .kanban-board:not(.show-snoozed) .kanban-card[data-snoozed="true"] {
+  display: none;
+}
+
+/* Pages carrying a toggled-off tag chip are hidden */
+.kanban-card.kanban-tag-hidden {
   display: none;
 }
 
@@ -391,6 +432,22 @@ function KanbanBoard(pageQuery, options)
         return s
     end
 
+    -- Returns a page's frontmatter tags as a normalized list
+    local function pageTags(p)
+        local result = {}
+        local raw = p.tags
+        if type(raw) == "string" then raw = { raw } end
+        if type(raw) == "table" then
+            for _, t in ipairs(raw) do
+                local tag = normalizeTag(t)
+                if tag ~= "" then
+                    table.insert(result, tag)
+                end
+            end
+        end
+        return result
+    end
+
     -- A page is snoozed while its snoozeDate frontmatter field (YYYY-MM-DD)
     -- lies in the future. A missing, empty or "none" value — or anything that
     -- does not parse as a date — means the page is not snoozed.
@@ -448,6 +505,13 @@ function KanbanBoard(pageQuery, options)
     end
 
     if #columnOrder == 0 then return widget.new{ display="block", html="<p>Error: No columns defined for Kanban board.</p>" } end
+
+    -- Lookup set of the tags required via the Tags option; those never
+    -- show up as toggleable chips
+    local requiredTagSet = {}
+    for _, t in ipairs(requiredTags) do
+        requiredTagSet[t] = true
+    end
 
     -- A page is shown only if it carries ALL required tags in its frontmatter
     local function hasRequiredTags(p)
@@ -521,6 +585,43 @@ function KanbanBoard(pageQuery, options)
         table.sort(pagesByStatus[status], comparePages)
     end
 
+    -- Collect the board's toggleable tag chips: every frontmatter tag across
+    -- the board's pages (snoozed/hidden pages included, so the chip set stays
+    -- stable), except the tags required via the Tags option
+    local chipTagList = {}
+    local chipTagSeen = {}
+    for _, status in ipairs(columnOrder) do
+        for _, pg in ipairs(pagesByStatus[status]) do
+            for _, tag in ipairs(pageTags(pg)) do
+                if not chipTagSeen[tag] and not requiredTagSet[tag] then
+                    chipTagSeen[tag] = true
+                    table.insert(chipTagList, tag)
+                end
+            end
+        end
+    end
+    table.sort(chipTagList)
+
+    -- Chip toggle state persists in the browser window as a comma-separated
+    -- list of toggled-off tags, so it survives widget re-renders
+    local tagsOff = {}
+    local tagsOffRaw = js.window._kanbanTagsOff
+    if type(tagsOffRaw) == "string" then
+        for tag in tagsOffRaw:gmatch("[^,%s]+") do
+            tagsOff[tag] = true
+        end
+    end
+
+    -- A page is chip-hidden when any of its tags is toggled off
+    local function isTagHidden(p)
+        for _, tag in ipairs(pageTags(p)) do
+            if tagsOff[tag] then
+                return true
+            end
+        end
+        return false
+    end
+
     -- The root wrapper carries the board config as data attributes; a single
     -- session-persistent delegated event engine (installed once, see jsCode
     -- below) operates on any board instance purely from the DOM. This keeps
@@ -537,23 +638,40 @@ function KanbanBoard(pageQuery, options)
         snoozeBtnTitle = "Hide snoozed tasks"
     end
 
+    -- Toggleable tag chips for the left side of the controls bar
+    local chipsHtml = ""
+    if #chipTagList > 0 then
+        chipsHtml = '<span class="kanban-tag-chips">'
+        for _, tag in ipairs(chipTagList) do
+            local tagEsc = tag:gsub('"', '&quot;')
+            tagEsc = tagEsc:gsub('<', '&lt;')
+            tagEsc = tagEsc:gsub('>', '&gt;')
+            local chipClass = "kanban-tag-chip"
+            local chipTitle = "Hide pages tagged #" .. tag
+            if tagsOff[tag] then
+                chipTitle = "Show pages tagged #" .. tag
+            else
+                chipClass = chipClass .. " active"
+            end
+            chipsHtml = chipsHtml .. '<button class="' .. chipClass .. '" data-tag="' .. tagEsc .. '" title="' .. chipTitle .. '">#' .. tagEsc .. '</button>'
+        end
+        chipsHtml = chipsHtml .. '</span>'
+    end
+
     local html = '<div data-kanban-root="true" data-status-key="' .. statusKey .. '">'
-    html = html .. '<div class="kanban-controls"><button class="' .. snoozeBtnClass .. '" title="' .. snoozeBtnTitle .. '">⏰</button></div>'
+    html = html .. '<div class="kanban-controls">' .. chipsHtml .. '<button class="' .. snoozeBtnClass .. '" title="' .. snoozeBtnTitle .. '">⏰</button></div>'
     html = html .. '<div class="kanban-board' .. (showSnoozed and ' show-snoozed' or '') .. '">'
 
     for _, status in ipairs(columnOrder) do
         local title = columnTitles[status]
         local pages = pagesByStatus[status]
 
-        -- Column count reflects what is visible: snoozed pages are hidden
-        -- unless the toggle has been switched on
-        local visibleCount = #pages
-        if not showSnoozed then
-            visibleCount = 0
-            for _, pg in ipairs(pages) do
-                if not isSnoozed(pg) then
-                    visibleCount = visibleCount + 1
-                end
+        -- Column count reflects what is visible: pages with a toggled-off
+        -- tag chip, and snoozed pages while snoozes are hidden, don't count
+        local visibleCount = 0
+        for _, pg in ipairs(pages) do
+            if not isTagHidden(pg) and not (isSnoozed(pg) and not showSnoozed) then
+                visibleCount = visibleCount + 1
             end
         end
 
@@ -579,7 +697,18 @@ function KanbanBoard(pageQuery, options)
             displayNameEsc = displayNameEsc:gsub('<', '&lt;')
             displayNameEsc = displayNameEsc:gsub('>', '&gt;')
 
-            html = html .. '<div class="kanban-card" draggable="true" data-page="' .. pageNameEsc .. '"' ..
+            -- Tags for the toggleable chips in the top bar; a page whose
+            -- chip-hidden state is on starts hidden until a chip toggles back
+            local cardTags = table.concat(pageTags(p), ",")
+            local cardTagsEsc = cardTags:gsub('"', '&quot;')
+            cardTagsEsc = cardTagsEsc:gsub('<', '&lt;')
+            cardTagsEsc = cardTagsEsc:gsub('>', '&gt;')
+            local cardClass = "kanban-card"
+            if isTagHidden(p) then
+                cardClass = cardClass .. " kanban-tag-hidden"
+            end
+
+            html = html .. '<div class="' .. cardClass .. '" draggable="true" data-page="' .. pageNameEsc .. '" data-tags="' .. cardTagsEsc .. '"' ..
                 (isSnoozed(p) and ' data-snoozed="true"' or '') .. '>'
 
             -- Clickable Title (link and tooltip keep the full page name)
@@ -680,15 +809,17 @@ function KanbanBoard(pageQuery, options)
         let touchStartX, touchStartY;
 
         // Column counts reflect what is visible: snoozed cards are hidden
-        // (via CSS) unless the board carries the show-snoozed class
+        // (via CSS) unless the board carries the show-snoozed class, and
+        // cards with a toggled-off tag chip carry kanban-tag-hidden
         const recount = (column) => {
             const countEl = column.querySelector('.kanban-col-count');
             if (!countEl) return;
             const board = column.closest('.kanban-board');
             const showSnoozed = board && board.classList.contains('show-snoozed');
-            const selector = showSnoozed
-                ? '.kanban-card'
-                : '.kanban-card:not([data-snoozed="true"])';
+            let selector = '.kanban-card:not(.kanban-tag-hidden)';
+            if (!showSnoozed) {
+                selector += ':not([data-snoozed="true"])';
+            }
             countEl.textContent = column.querySelectorAll(selector).length;
         };
 
@@ -807,6 +938,38 @@ function KanbanBoard(pageQuery, options)
             toggleBtn.classList.toggle('active', showSnoozed);
             toggleBtn.title = showSnoozed ? "Hide snoozed tasks" : "Show snoozed tasks";
             root.querySelectorAll('.kanban-column').forEach(recount);
+        });
+
+        // Tag chip toggle: hide/show all pages carrying the chip's tag.
+        // The set of toggled-off tags persists as a comma-separated string in
+        // the browser window; the Lua side reads it on the next render.
+        document.addEventListener("click", (e) => {
+            const chip = e.target.closest ? e.target.closest('.kanban-tag-chip') : null;
+            if (!chip) return;
+            e.preventDefault();
+            const root = getRoot(chip);
+            if (!root) return;
+            const tag = chip.dataset.tag;
+            if (!tag) return;
+
+            const off = new Set(
+                (window._kanbanTagsOff || "").split(",").filter((t) => t.length > 0),
+            );
+            const nowActive = chip.classList.toggle("active");
+            if (nowActive) {
+                off.delete(tag);
+                chip.title = "Hide pages tagged #" + tag;
+            } else {
+                off.add(tag);
+                chip.title = "Show pages tagged #" + tag;
+            }
+            window._kanbanTagsOff = Array.from(off).join(",");
+
+            root.querySelectorAll(".kanban-card").forEach((card) => {
+                const tags = (card.dataset.tags || "").split(",").filter((t) => t.length > 0);
+                card.classList.toggle("kanban-tag-hidden", tags.some((t) => off.has(t)));
+            });
+            root.querySelectorAll(".kanban-column").forEach(recount);
         });
     })();
     ]]
