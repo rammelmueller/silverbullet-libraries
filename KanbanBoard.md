@@ -1,7 +1,7 @@
 ---
 name: "Library/rammelmueller/KanbanBoard"
 tags: meta/library
-pageDecoration.prefix: "✅ "
+pageDecoration.prefix: "📋️ "
 ---
 
 # Kanban Board
