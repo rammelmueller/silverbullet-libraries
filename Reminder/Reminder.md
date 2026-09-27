@@ -126,6 +126,12 @@ ${ReminderWall()}
   opacity: 0.75;
 }
 
+/* When the toggle reveals hidden (snoozed) notes, the placeholder retracts;
+   with truly no notes at all it stays put regardless of the toggle */
+.rem-wall.show-snoozed .rem-empty[data-has-hidden] {
+  display: none;
+}
+
 .rem-note {
   position: relative;
   width: 200px;
@@ -425,8 +431,13 @@ function ReminderWall(reminderQuery)
     html = html .. '<div class="rem-wall' .. (showSnoozed and ' show-snoozed' or '') .. '">'
 
     local noteCount = 0
+    local visibleCount = 0
     for p in reminderQuery do
         noteCount = noteCount + 1
+        local snoozed = isSnoozed(p)
+        if not snoozed or showSnoozed then
+            visibleCount = visibleCount + 1
+        end
         local pageName = tostring(p.name or "")
         local displayName = tostring(p.title or pageName)
         local pageNameEsc = pageName:gsub('"', '&quot;')
@@ -439,7 +450,7 @@ function ReminderWall(reminderQuery)
         -- Note attributes: write target, pending state and current reminder
         -- date (pre-fills the snooze picker)
         local noteAttrs = ' data-page="' .. pageNameEsc .. '"'
-        if isSnoozed(p) then
+        if snoozed then
             noteAttrs = noteAttrs .. ' data-snoozed="true"'
         end
         local rd = p.reminderDate
@@ -454,9 +465,16 @@ function ReminderWall(reminderQuery)
         html = html .. '</div>'
     end
 
-    if noteCount == 0 then
-        -- Empty state: a sleeping Snorlax with some subtle text
-        html = html .. '<div class="rem-empty">'
+    if visibleCount == 0 then
+        -- Empty state: a sleeping Snorlax with some subtle text. Shown when
+        -- nothing is visible — including when all notes exist but are
+        -- hidden as snoozed. data-has-hidden lets CSS retract the
+        -- placeholder once the toggle reveals those notes (see below).
+        local emptyAttrs = ""
+        if noteCount > 0 then
+            emptyAttrs = ' data-has-hidden="true"'
+        end
+        html = html .. '<div class="rem-empty"' .. emptyAttrs .. '>'
         html = html .. '<svg class="rem-empty-art" viewBox="0 0 220 150" xmlns="http://www.w3.org/2000/svg">'
         html = html .. '<text x="182" y="34" font-size="20" fill="currentColor" opacity="0.45">Z</text>'
         html = html .. '<text x="197" y="21" font-size="14" fill="currentColor" opacity="0.35">z</text>'
