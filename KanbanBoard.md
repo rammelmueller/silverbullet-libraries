@@ -42,6 +42,7 @@ You can define the columns and their corresponding status values in the widget's
 - **Custom card fields** — choose which frontmatter attributes are shown on each card (`Fields`)
 - **Short card names** — cards display only the file name (the part after the last `/` of the page name, e.g. `task/buy-milk` shows as `buy-milk`); links still open the full page
 - **Snooze support** — pages whose `snoozeDate` frontmatter date lies in the future are hidden from the board; the ⏰ button toggles them into view
+- **Sorted columns** — cards are sorted within columns by a configurable frontmatter attribute (default `urgency`)
 - **HideKeys** — display an attribute value without showing its label (handy for IDs or long text)
 - **Mobile-friendly** — columns hold their minimum width and the board scrolls horizontally on narrow screens instead of squishing
 
@@ -62,6 +63,7 @@ You can define the columns and their corresponding status values in the widget's
     *   **`Column`**: The frontmatter attribute to use for column assignment (e.g., `"status"`).
     *   **`Columns`**: An ordered list of columns, where each column is a `{status, title}` pair with an optional third element as accent colour (e.g., `{"todo", "📝 To Do", "purple"}`).
     *   **`Tags`**: (Optional) A list of tags. A page must carry **all** of them in its frontmatter to appear on this board.
+    *   **`SortDefault`**: (Optional) The frontmatter attribute used to sort cards within columns. Defaults to `"urgency"`. Numeric values sort highest-first, everything else alphabetically; pages without the attribute sort last.
     *   **`Fields`**: (Optional) A list of frontmatter attributes to display on the card. E.g. `{"due", "priority"}`.
     *   **`HideKeys`**: (Optional) Hide certain attribute keys/labels from the card. This can be useful if you have a longer text or a title as attribute and want to display the whole thing.
 
@@ -93,6 +95,7 @@ ${KanbanBoard(
       {"done", "✅ Done","green"}
     }},
     {"Tags", {"project"}},
+    {"SortDefault", "urgency"},
     {"Fields", {"priority", "due"}},
     {"HideKeys", {"taskID"}}
   }
@@ -411,6 +414,7 @@ function KanbanBoard(pageQuery, options)
     local fields = {} -- for custom fields
     local hideKeys = {} -- field keys whose label is hidden on cards, set via {"HideKeys", {"key1","key2"}}
     local requiredTags = {} -- a page must carry all of these frontmatter tags, set via {"Tags", {"tag1","tag2"}}
+    local sortDefault = "urgency" -- attribute used to sort cards within columns, set via {"SortDefault", "fieldname"}
 
     for _, opt in ipairs(options) do
         if opt[1] == "Column" then statusKey = opt[2] end
@@ -427,6 +431,7 @@ function KanbanBoard(pageQuery, options)
           end
         end
         if opt[1] == "Fields" then fields = opt[2] or {} end
+        if opt[1] == "SortDefault" then sortDefault = opt[2] or "urgency" end
         if opt[1] == "HideKeys" then -- build a lookup set of keys whose label to hide on cards
             for _, k in ipairs(opt[2] or {}) do
                 hideKeys[tostring(k)] = true
@@ -485,6 +490,35 @@ function KanbanBoard(pageQuery, options)
                 table.insert(pagesByStatus[status], p)
             end
         end
+    end
+
+    -- Sort each column by the configured attribute: numeric values sort
+    -- highest first (e.g. urgency), everything else alphabetically;
+    -- pages without the attribute sort last.
+    local function hasSortValue(v)
+        return v ~= nil and v ~= ""
+    end
+
+    local function comparePages(a, b)
+        local av = a[sortDefault]
+        local bv = b[sortDefault]
+        local aMissing = not hasSortValue(av)
+        local bMissing = not hasSortValue(bv)
+        if aMissing or bMissing then
+            return (not aMissing) and bMissing
+        end
+        local an = tonumber(tostring(av))
+        local bn = tonumber(tostring(bv))
+        if an ~= nil and bn ~= nil then
+            return an > bn
+        end
+        local as = tostring(av)
+        local bs = tostring(bv)
+        return as < bs
+    end
+
+    for _, status in ipairs(columnOrder) do
+        table.sort(pagesByStatus[status], comparePages)
     end
 
     -- The root wrapper carries the board config as data attributes; a single
