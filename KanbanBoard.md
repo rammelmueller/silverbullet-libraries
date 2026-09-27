@@ -43,6 +43,7 @@ You can define the columns and their corresponding status values in the widget's
 - **Custom card fields** — choose which frontmatter attributes are shown on each card (`Fields`)
 - **Short card names** — cards display only the file name (the part after the last `/` of the page name, e.g. `task/buy-milk` shows as `buy-milk`); links still open the full page
 - **Snooze support** — pages whose `snoozeDate` frontmatter date lies in the future are hidden from the board; the ⏰ button toggles them into view
+- **Per-card snooze** — every card carries a 💤 button that opens the system date picker; the picked date is written to the page's `snoozeDate` field (clearing the picker writes `none`)
 - **Sorted columns** — cards are sorted within columns by a configurable frontmatter attribute (default `urgency`)
 - **HideKeys** — display an attribute value without showing its label (handy for IDs or long text)
 - **Mobile-friendly** — columns hold their minimum width and the board scrolls horizontally on narrow screens instead of squishing
@@ -81,6 +82,8 @@ snoozeDate: 2026-03-02
 ```
 
 The ⏰ button in the board's top bar reveals snoozed pages temporarily; the toggle state is kept for the session and survives widget re-renders. Snoozed pages are excluded from the column counts while hidden, and when revealed they are rendered in gray regardless of their column's accent color.
+
+Every card carries a 💤 button: clicking it opens the system date picker (pre-filled with the page's current `snoozeDate`); the picked date is written to the page's `snoozeDate` field and the board refreshes. To un-snooze, reveal snoozed pages via the ⏰ button, open the picker on the gray card and clear the date — this writes `snoozeDate: none`.
 
 ### Tag chips
 
@@ -309,6 +312,32 @@ html[data-theme='light'] .kanban-board .kanban-card[data-snoozed="true"] {
 
 
 /* ---------------------------------
+   Per-Card Snooze Button
+---------------------------------- */
+
+.kanban-snooze-btn {
+  position: absolute;
+  bottom: 0;
+  right: 5px;
+  font-size: 14px;
+  cursor: pointer;
+  opacity: 0.4;
+  padding: 4px 6px;
+  z-index: 1;
+  line-height: normal;
+  transition: opacity 0.2s;
+}
+
+.kanban-snooze-btn:hover {
+  opacity: 1;
+}
+
+/* Currently snoozed cards keep the button visible for un-snoozing */
+.kanban-card[data-snoozed="true"] .kanban-snooze-btn {
+  opacity: 0.8;
+}
+
+/* ---------------------------------
    Column Card Colors (optional accent color per column)
 ---------------------------------- */
 
@@ -416,6 +445,16 @@ if not js.window.kanbanListenersAdded then
                 e.detail.page,
                 e.detail.statusKey,
                 e.detail.newStatus
+            )
+        end
+    end)
+
+    js.window.addEventListener("sb-kanban-snooze-update", function(e)
+        if e.detail and e.detail.action == "snooze" then
+            updatePageFrontmatter(
+                e.detail.page,
+                "snoozeDate",
+                e.detail.value
             )
         end
     end)
@@ -713,11 +752,23 @@ function KanbanBoard(pageQuery, options)
                 cardClass = cardClass .. " kanban-tag-hidden"
             end
 
+            -- Expose a parseable current snoozeDate so the per-card date
+            -- picker can pre-fill it
+            local snoozeDateAttr = ""
+            local sd = p.snoozeDate
+            if sd ~= nil and tostring(sd):find("^%d%d%d%d%-%d%d%-%d%d") then
+                snoozeDateAttr = ' data-snooze-date="' .. tostring(sd) .. '"'
+            end
+
             html = html .. '<div class="' .. cardClass .. '" draggable="true" data-page="' .. pageNameEsc .. '" data-tags="' .. cardTagsEsc .. '"' ..
+                snoozeDateAttr ..
                 (isSnoozed(p) and ' data-snoozed="true"' or '') .. '>'
 
             -- Clickable Title (link and tooltip keep the full page name)
             html = html .. '<a class="kanban-card-name" draggable="false" href="/' .. pageNameEsc .. '" data-ref="/' .. pageNameEsc .. '" title="' .. pageNameEsc .. '">' .. displayNameEsc .. '</a>'
+
+            -- Per-card snooze button (opens the native date picker)
+            html = html .. '<div class="kanban-snooze-btn" title="Snooze this task until...">💤</div>'
 
             -- Custom Fields
             if #fields > 0 then
@@ -975,6 +1026,62 @@ function KanbanBoard(pageQuery, options)
                 card.classList.toggle("kanban-tag-hidden", tags.some((t) => off.has(t)));
             });
             root.querySelectorAll(".kanban-column").forEach(recount);
+        });
+
+        // Per-card snooze button: opens the browser's native date picker
+        // (pre-filled with the card's current snoozeDate) and dispatches an
+        // event that the Lua side persists to the page's frontmatter.
+        // Clearing the picker writes "none" (not snoozed).
+        document.addEventListener("click", (e) => {
+            const snoozeBtn = e.target.closest ? e.target.closest('.kanban-snooze-btn') : null;
+            if (!snoozeBtn) return;
+            e.preventDefault();
+            e.stopPropagation();
+            const card = snoozeBtn.closest('.kanban-card');
+            if (!card) return;
+            const page = card.dataset.page;
+            if (!page) return;
+
+            // Remove any leftover picker input from a previous interaction
+            document.querySelectorAll('.kanban-snooze-picker').forEach((el) => el.remove());
+
+            const input = document.createElement('input');
+            input.type = 'date';
+            input.className = 'kanban-snooze-picker';
+            input.value = card.dataset.snoozeDate || '';
+            input.style.position = 'fixed';
+            input.style.left = (e.clientX || 0) + 'px';
+            input.style.top = (e.clientY || 0) + 'px';
+            input.style.width = '1px';
+            input.style.height = '1px';
+            input.style.opacity = '0';
+            input.style.padding = '0';
+            input.style.border = 'none';
+            input.style.zIndex = '9999';
+            document.body.appendChild(input);
+
+            input.addEventListener('change', () => {
+                const value = input.value || 'none';
+                input.remove();
+                window.dispatchEvent(new CustomEvent("sb-kanban-snooze-update", {
+                    detail: { action: "snooze", page: page, value: value }
+                }));
+            });
+            // Dismissed without picking anything: just clean up
+            input.addEventListener('cancel', () => input.remove());
+            input.addEventListener('blur', () => setTimeout(() => input.remove(), 100));
+
+            try {
+                input.showPicker();
+            } catch (err) {
+                // showPicker() unsupported or blocked: fall back to showing
+                // the input itself so it can be interacted with directly
+                input.style.opacity = '1';
+                input.style.width = 'auto';
+                input.style.height = 'auto';
+                input.style.padding = '4px 6px';
+                input.focus();
+            }
         });
     })();
     ]]
