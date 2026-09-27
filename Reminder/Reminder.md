@@ -96,10 +96,34 @@ ${ReminderWall()}
   align-content: flex-start;
 }
 
+/* Empty state: kanban-column style background with a centered, subtle
+   sleeping-Snorlax illustration */
 .rem-empty {
-  padding: 20px;
-  opacity: 0.6;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  min-height: 180px;
+  padding: 24px 16px;
+  box-sizing: border-box;
+  border-radius: 18px;
+  background: oklch(from var(--modal-help-background-color) l c h / 0.4);
+  color: var(--text-muted);
   font-style: italic;
+  text-align: center;
+}
+
+.rem-empty-art {
+  width: 150px;
+  height: auto;
+  margin-bottom: 8px;
+  opacity: 0.8;
+}
+
+.rem-empty-sub {
+  font-size: 0.8em;
+  opacity: 0.75;
 }
 
 .rem-note {
@@ -431,7 +455,27 @@ function ReminderWall(reminderQuery)
     end
 
     if noteCount == 0 then
-        html = html .. '<div class="rem-empty">No reminders due.</div>'
+        -- Empty state: a sleeping Snorlax with some subtle text
+        html = html .. '<div class="rem-empty">'
+        html = html .. '<svg class="rem-empty-art" viewBox="0 0 220 150" xmlns="http://www.w3.org/2000/svg">'
+        html = html .. '<text x="182" y="34" font-size="20" fill="currentColor" opacity="0.45">Z</text>'
+        html = html .. '<text x="197" y="21" font-size="14" fill="currentColor" opacity="0.35">z</text>'
+        html = html .. '<text x="207" y="11" font-size="10" fill="currentColor" opacity="0.25">z</text>'
+        html = html .. '<path d="M72 40 L64 12 L94 28 Z" fill="#2e6b63"/>'
+        html = html .. '<path d="M148 40 L156 12 L126 28 Z" fill="#2e6b63"/>'
+        html = html .. '<ellipse cx="110" cy="85" rx="75" ry="62" fill="#2e6b63"/>'
+        html = html .. '<ellipse cx="110" cy="78" rx="48" ry="34" fill="#f2e3c2"/>'
+        html = html .. '<path d="M76 66 q11 10 22 0" stroke="#3f3a33" stroke-width="3" fill="none" stroke-linecap="round"/>'
+        html = html .. '<path d="M122 66 q11 10 22 0" stroke="#3f3a33" stroke-width="3" fill="none" stroke-linecap="round"/>'
+        html = html .. '<ellipse cx="110" cy="77" rx="5" ry="3.5" fill="#3f3a33"/>'
+        html = html .. '<ellipse cx="110" cy="93" rx="7" ry="5" fill="#3f3a33"/>'
+        html = html .. '<ellipse cx="110" cy="122" rx="44" ry="25" fill="#f2e3c2"/>'
+        html = html .. '<circle cx="70" cy="116" r="12" fill="#2e6b63"/>'
+        html = html .. '<circle cx="150" cy="116" r="12" fill="#2e6b63"/>'
+        html = html .. '</svg>'
+        html = html .. '<div class="rem-empty-text">No reminders due</div>'
+        html = html .. '<div class="rem-empty-sub">Shh... Snorlax is sleeping.</div>'
+        html = html .. '</div>'
     end
 
     html = html .. '</div>' -- close rem-wall
