@@ -77,7 +77,7 @@ snoozeDate: 2026-03-02
 ---
 ```
 
-The ⏰ button in the board's top bar reveals snoozed pages temporarily; the toggle state is kept for the session and survives widget re-renders. Snoozed pages are excluded from the column counts while hidden.
+The ⏰ button in the board's top bar reveals snoozed pages temporarily; the toggle state is kept for the session and survives widget re-renders. Snoozed pages are excluded from the column counts while hidden, and when revealed they are rendered in gray regardless of their column's accent color.
 
 ### Widget example
 
@@ -250,6 +250,19 @@ taskID: P-17
 /* Snoozed cards are hidden unless the board carries the show-snoozed class */
 .kanban-board:not(.show-snoozed) .kanban-card[data-snoozed="true"] {
   display: none;
+}
+
+/* When revealed, snoozed cards render gray, overriding any column accent color */
+html[data-theme='dark'] .kanban-board .kanban-card[data-snoozed="true"] {
+  background: oklch(0.35 0 0);
+  border-color: oklch(0.45 0 0);
+  box-shadow: none;
+}
+
+html[data-theme='light'] .kanban-board .kanban-card[data-snoozed="true"] {
+  background: oklch(0.92 0 0);
+  border-color: oklch(0.78 0 0);
+  box-shadow: none;
 }
 
 
