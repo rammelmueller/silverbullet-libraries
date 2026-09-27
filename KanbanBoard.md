@@ -6,84 +6,69 @@ pageDecoration.prefix: "✅ "
 
 # Kanban Board
 
-This widget creates a customisable Kanban board to visualize and manage tasks from your notes.
+This widget creates a customisable Kanban board to visualise and manage your **pages**.
+Cards are whole pages; the columns are driven by a frontmatter attribute (typically `status`), and dragging a card between columns rewrites that attribute directly in the page's frontmatter.
 
 ## DEMO WIDGET
 ${KanbanBoard(
-  query[[from index.tag "task" where page == _CTX.currentPage.name]], 
+  query[[from index.tag "page"]], 
   {
     {"Column", "status"},
     {"Columns", {
-      {"📥", "To Do","purple"},
-      {"⏳", "In Progress","blue"},
-      {"👀", "Needs Review","orange"},
-      {"✅", "Done","green"}
+      {"todo", "📥 To Do","purple"},
+      {"doing", "⏳ In Progress","blue"},
+      {"review", "👀 Needs Review","orange"},
+      {"done", "✅ Done","green"}
     }},
-    {"SortDefault", "priority"},
-    {"Fields", {"taskID","priority", "scheduled", "due", "status", "contact","tags"}},
-    {"HideKeys", {"taskID","tags"}}
+    {"Tags", {"kanban"}}
   }
 )}
 
-## DEMO Tasks
-- [ ] [priority: "1"] Multi line task with a #wine hashtag and a [[WikiLink]] in the name and at the end #mint
-      [scheduled: "2026-02-27"][taskID: "T-01-26"]
-      [contact: "#George"] [status: "📥"] [due: "2026-03-02"]  
-* [ ] Task with a #TestTag and special @ # - * , ! ; $ \ | / characters
-      [status: "📥"]  [priority: "2"] [due: "2026-02-02"][taskID: "T-02-26"] 
-* [ ] Another normal task  with a #TestTag in the name [status: "⏳"][due: "2026-02-13"][scheduled: "2026-04-01"] #maroon [priority: "2"][taskID: "T-03-26"]
-- [ ] Completed task [priority: "3"] [status: "👀"][taskID: "T-06-26"]
-- [ ] High priority with two [[WikiLink]] in [[name]] #TestTag
-      [status: "⏳"][priority: "5"] [taskID: "T-04-26"] 
-- [ ] New task with at tag at the end #TestTag [status: "👀"] [priority: "4"][taskID:"T-05-26"]   
-- [x] Hidden task to demonstrate the Hide/Show button [priority: "5"]   [status: "✅"] [kanbanHide: "true"] [completed: "2026-02-18 21:20"]
-
+Pages tagged `kanban` in their frontmatter appear on this board. Drag a card to another column to update the page's `status`.
 
 ## How it Works
 
-The Kanban board works by querying tasks and organising them into columns based on a specific attribute, typically `status`
+The Kanban board works by querying pages and organising them into columns based on a frontmatter attribute, typically `status`.
 You can define the columns and their corresponding status values in the widget's parameters.
 
 > **warning** Important
->   * If you manually edit a task in the markdown, you **must refresh the widget** for changes to appear.
+>   * If you manually edit a page's frontmatter, you **must refresh the widget** for changes to appear.
 
 ### ✨ Features
 
+- **Pages instead of tasks** — cards are whole pages; the column attribute and all card fields are read from frontmatter
+- **Drag & drop** — move cards between columns; the status attribute is updated directly in the page's frontmatter, creating a frontmatter block if the page has none yet
+- **Tag filter** — restrict the board to pages carrying all of the given frontmatter tags (`Tags` option)
 - **Customisable columns** — define your own workflow stages with labels, emoji, and optional accent colours per column
-- **Drag & drop** — move cards between columns; status attribute and checkbox state update automatically in the source markdown
-- **Bidirectional markdown sync** — tick `[x]` directly in the markdown and the card moves to the done column on the next widget load; uncheck it and it moves back
-- **Quick Edit modal** — edit task name, any attribute, and completion state without leaving the board
-- **Custom card fields** — choose which task attributes are shown on each card
+- **Custom card fields** — choose which frontmatter attributes are shown on each card (`Fields`)
 - **HideKeys** — display an attribute value without showing its label (handy for IDs or long text)
-- **Filter & sort controls** — live filter across all columns, sort by any attribute ascending or descending
-- **WikiLink & hashtag support** — both are parsed correctly in card titles and are preserved when you edit through the modal
 - **Mobile-friendly** — columns hold their minimum width and the board scrolls horizontally on narrow screens instead of squishing
 
 
 ### 🚫 Known Limitations
 
-- **Emoji-style date attributes** (e.g. `📅 2026-04-02`) are not supported and are not planned
-- Keep the Order of the elements organized & sorted: don’t mix tags in the description and neither between `attributes`
-- Manual markdown edits to a task require a widget refresh to appear on the board
-- Attribute values are always wrapped in double quotes - this is intentional, not a bug
+- Tags for the `Tags` filter must live in **frontmatter** (`tags: kanban, project`); hashtags in the page body are not considered
+- Manual frontmatter edits to a page require a widget refresh to appear on the board
+- Status values are matched case-insensitively; pages with an unknown or missing status appear in the first column
+- Status values are written as plain YAML scalars (`status: done`) and are only quoted when a plain scalar would be ambiguous
 
 ## Setup and Configuration
 
 ### Widget Parameters
 
-*   **`query`**: (Required) A SilverBullet query to fetch the tasks to display.
+*   **`query`**: (Required) A SilverBullet query returning pages, e.g. `query[[from index.tag "page"]]`.
 *   **`options`**: (Required) A table to configure the board's behavior.
-    *   **`Column`**: The task attribute to use for column status (e.g., `"status"`).
-    *   **`Columns`**: An ordered list of columns, where each column is a `{status, title}` pair (e.g., `{{'todo', 'To Do'}, {'doing', 'In Progress'}}`).
-    *   **`SortDefault`**: (Optional) The task attribute to use for default sorting cards within columns. e.g. `priority`.
-    *   **`Fields`**: (Optional) A list of task attributes to display on the card. E.g. `{"due", "priority"}`.
-    *   **HideKeys**: (Optional) Hide certain attribute keys/labels from the card. This can be usefull if you have a longer text or a title as attribute and want to display the whole thin
+    *   **`Column`**: The frontmatter attribute to use for column assignment (e.g., `"status"`).
+    *   **`Columns`**: An ordered list of columns, where each column is a `{status, title}` pair with an optional third element as accent colour (e.g., `{"todo", "📝 To Do", "purple"}`).
+    *   **`Tags`**: (Optional) A list of tags. A page must carry **all** of them in its frontmatter to appear on this board.
+    *   **`Fields`**: (Optional) A list of frontmatter attributes to display on the card. E.g. `{"due", "priority"}`.
+    *   **`HideKeys`**: (Optional) Hide certain attribute keys/labels from the card. This can be useful if you have a longer text or a title as attribute and want to display the whole thing.
 
 ### Widget example
 
 ```lua
 ${KanbanBoard(
-  query[[from index.tag "task"]], 
+  query[[from index.tag "page"]], 
   {
     {"Column", "status"},
     {"Columns", {
@@ -92,53 +77,31 @@ ${KanbanBoard(
       {"review", "👀 Needs Review","yellow"},
       {"done", "✅ Done","green"}
     }},
-    {"SortDefault", "priority"},
-    {"Fields", {"priority", "completed"}},
-    {"HideKeys", {"tags"}}
+    {"Tags", {"project"}},
+    {"Fields", {"priority", "due"}},
+    {"HideKeys", {"taskID"}}
   }
 )}
 ```
 
-### Configuration options
+### Example page
 
-```lua
-
--- Disable automatic adding/removing of the [completed: "«datetime»"] attribute
--- Default is true
-
-config.set("kanban", { completedAttribute = false })
-
+```yaml
+---
+status: doing
+tags: project
+priority: 3
+due: 2026-03-02
+taskID: P-17
+---
+# My page
 ```
-
 
 # Implementation
 
 ## CSS Styling
 
 ```space-style
-.kanban-reset-filter-btn {
-  padding: 8px 12px;
-  border-radius: 8px;
-  border: 1px solid var(--modal-border-color);
-  background: var(--modal-background-color);
-  color: var(--text-muted);
-  font-size: 0.85em;
-  font-weight: bold;
-  cursor: pointer;
-  transition: all 0.2s;
-  line-height: normal;
-  flex-shrink: 0;
-}
-
-.kanban-reset-filter-btn:hover {
-  background: var(--ui-accent-color);
-  color: var(--modal-selected-option-color);
-}
-
-.kanban-reset-filter-btn:active {
-  opacity: 0.7;
-}
-
 #sb-main .cm-editor .sb-lua-directive-block:has(.kanban-board) .button-bar { 
   top: -40px; 
   padding:0; 
@@ -207,46 +170,20 @@ config.set("kanban", { completedAttribute = false })
   box-sizing: border-box; 
 }
 
-.kanban-card-name,
-.kanban-card-page {
+.kanban-card-name {
   overflow: hidden; 
   text-overflow: ellipsis;
   white-space: nowrap; 
-}
-
-.kanban-card-name {
   font-weight: bold;
   margin-bottom: 4px;
   display: block;
-/*  padding-right: 10px;*/
   text-decoration-line: none;
-}
-
-.kanban-card-page {
-  font-size: 0.8em;
-  opacity: 0.7;
-}
-
-.kanban-card-edit {
-    position: absolute;
-    font-size: 20px;
-    bottom: 0px;
-    right: 5px;
-    cursor: pointer;
-    opacity: 0.5;
-    padding: 5px;
-    z-index: 1;
-}
-
-.kanban-card-edit:hover {
-  opacity: 1;
 }
 
 .kanban-card-fields {
   margin-top: 8px;
   display: flex;
   flex-direction: column;
-  /*gap: 4px;*/
   font-size: 0.85em;
   opacity: 0.8;
 }
@@ -259,92 +196,6 @@ config.set("kanban", { completedAttribute = false })
 .kanban-field-key {
   font-weight: bold;
   white-space: nowrap;
-}
-
-
-/* ---------------------------------
-   Kanban Controls (Filter / Sort)
----------------------------------- */
-
-.kanban-controls {
-  padding: 10px 20px 10px 20px;
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  justify-content: space-between;
-  gap: 12px;
-}
-
-.kanban-filter-container {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  flex-grow: 1;
-}
-
-.kanban-filter-label,
-.kanban-sort-label {
-  font-weight: 600;
-  font-size: 0.9em;
-  color: var(--text-muted);
-  white-space: nowrap;
-}
-
-.kanban-search-input {
-  width: 100%;
-  max-width: 300px;
-  padding: 8px 14px;
-  border-radius: 8px;
-  border: 1px solid var(--modal-border-color);
-  background: var(--modal-background-color);
-  color: var(--modal-color);
-  font-size: 0.9em;
-  outline: none;
-}
-
-.kanban-sort-container {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-}
-
-.kanban-sort-select {
-  padding: 6px 10px;
-  border-radius: 6px;
-  border: 1px solid var(--modal-border-color);
-  background: var(--modal-background-color);
-  color: var(--modal-color);
-  font-size: 0.85em;
-  outline: none;
-  cursor: pointer;
-}
-
-.kanban-sort-buttons {
-  display: flex;
-  border: 1px solid var(--modal-border-color);
-  border-radius: 6px;
-  overflow: hidden;
-}
-
-.kanban-sort-btn {
-  padding: 6px 10px;
-  border: none;
-  background: var(--modal-background-color);
-  color: var(--text-muted);
-  font-size: 0.75em;
-  font-weight: bold;
-  cursor: pointer;
-  transition: all 0.2s;
-}
-
-.kanban-sort-btn:hover {
-  background: var(--modal-border-color);
-  color: var(--modal-color);
-}
-
-.kanban-sort-btn.active {
-  background: var(--ui-accent-color);
-  color: white;
 }
 
 
@@ -364,259 +215,6 @@ html[data-theme='light'] .kanban-column-colored .kanban-card {
   box-shadow: 0 0 5px oklch(from var(--column-card-color) 0.7 0.15 h / 0.5);
 }
 
-
-/* ---------------------------------
-   Task Manager Theme Variables
----------------------------------- */
-
-html[data-theme='dark'] {
-  #sb-taskeditor {
-    --task-header-bg: var(--modal-hint-background-color);
-    --taskedit-modal-bg: var(--modal-background-color);
-    --taskedit-modal-input-bg: var(--modal-help-background-color);
-    --taskedit-modal-color: var(--modal-color);
-    --taskedit-modal-header: var(--modal-header-label-color);
-    --taskedit-modal-border: var(--modal-border-color);
-  }
-}
-
-html[data-theme='light'] {
-  #sb-taskeditor {
-    --task-header-bg: var(--ui-accent-color);
-    --taskedit-modal-bg: var(--modal-background-color);
-    --taskedit-modal-input-bg: var(--modal-help-background-color);
-    --taskedit-modal-color: var(--modal-color);
-    --taskedit-modal-border: var(--modal-border-color);
-  }
-}
-
-
-/* ---------------------------------
-   Edit Task Modal
----------------------------------- */
-
-#sb-taskeditor {
-  position: fixed;
-  inset: 0;
-  width: 100vw;
-  height: 100vh;
-  display: flex;
-  align-items: flex-start; /* Aligns card to the top */
-  justify-content: center;
-  background: rgba(0, 0, 0, 0.6);
-  backdrop-filter: blur(14px);
-  z-index: 200;
-  font-family: var(--ui-font);
-  transition: opacity 0.3s ease;
-  
-  /* Add padding and allow the background to scroll if content overflows */
-  padding: 5vh 15px 15px;
-  box-sizing: border-box;
-  overflow-y: auto;
-}
-
-.te-card {
-  width: 100%;
-  max-width: 500px; /* Base width for mobile */
-  max-height: 90vh; /* Max height relative to viewport */
-  
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
-
-  padding: 15px;
-  border-radius: 15px;
-
-  background: var(--taskedit-modal-bg);
-  color: var(--taskedit-modal-color);
-
-  border: 1px solid var(--taskedit-modal-border);
-  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.5);
-}
-
-#te-dynamic-fields {
-  display: flex;
-  flex-direction: column;
-  gap: 15px;
-  flex-grow: 1;
-  overflow-y: auto; /* Scroll ONLY the fields area */
-  overflow-x: hidden;
-  padding: 5px;
-}
-
-.te-header {
-  font-size: 1.1em;
-  font-weight: bold;
-  margin-bottom: 10px;
-  color: var(--taskedit-modal-header);
-  flex-shrink: 0; /* Prevent header from shrinking */
-}
-
-.te-group {
-  display: flex;
-  flex-direction: column;
-  gap: 5px;
-  min-width: 0;
-}
-
-.te-row {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-}
-
-.te-label {
-  font-size: 0.8em;
-  opacity: 0.7;
-  text-transform: uppercase;
-  letter-spacing: 0.5px;
-}
-
-.te-input,
-.te-attr-select {
-  background: var(--taskedit-modal-input-bg);
-  color: var(--taskedit-modal-color);
-}
-
-.te-input {
-  width: 100%;
-  box-sizing: border-box;
-
-  padding: 4px 6px;
-  border-radius: 6px;
-
-  border: 1px solid transparent;
-  outline: none;
-
-  font-size: 0.95em;
-  font-family: var(--ui-font);
-/*  transition: border-color 0.2s; */
-}
-
-.te-input:focus {
-  background: oklch(from var(--taskedit-modal-input-bg) l c h / 0.1);
-  border: 1px solid var(--ui-accent-color);
-}
-
-.te-checkbox {
-  width: 18px;
-  height: 18px;
-  cursor: pointer;
-  accent-color: var(--ui-accent-color);
-}
-
-.te-actions {
-  display: flex;
-  justify-content: flex-end;
-  gap: 10px;
-  margin-top: 15px;
-  flex-shrink: 0; /* Prevent action buttons from shrinking */
-}
-
-.te-btn {
-  padding: 6px 12px;
-  border-radius: 6px;
-  border: none;
-  cursor: pointer;
-  font-size: 0.9em;
-  font-weight: 600;
-}
-
-#te-add-attr-btn,
-.te-cancel {
-  color: oklch(from var(--taskedit-modal-color) l c h / 0.5);
-  background: rgba(128, 128, 128, 0.05);
-}
-
-#te-add-attr-btn:hover,
-.te-cancel:hover {
-  color: oklch(from var(--taskedit-modal-color) l c h);
-  background: rgba(128, 128, 128, 0.1);
-}
-
-.te-save {
-  color: var(--modal-selected-option-color);
-  background: var(--ui-accent-color);
-}
-
-.te-save:hover {
-  opacity: 0.9;
-}
-
-.te-attr-row {
-  display: flex;
-  align-items: flex-end;
-  flex-wrap: wrap; /* Allow wrapping on small screens */
-  gap: 10px;
-
-  margin-top: 10px;
-  padding: 10px;
-
-  border-radius: 10px;
-  border: 1px solid var(--taskedit-modal-border);
-
-  background: oklch(
-    from var(--taskedit-modal-input-bg)
-    calc(l - 0.1) c h / 0.1
-  );
-  flex-shrink: 0; /* Prevent this from shrinking */
-}
-
-.te-attr-col {
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-  flex: 1; /* Allow flex-grow */
-  min-width: 150px; /* But prevent squishing by forcing a wrap */
-}
-
-
-/* ---------------------------------
-   Native Date Picker Styling
----------------------------------- */
-
-input[type="date"]::-webkit-calendar-picker-indicator,
-input[type="datetime-local"]::-webkit-calendar-picker-indicator {
-  cursor: pointer;
-}
-
-input[type="date"]::-webkit-datetime-edit-fields-wrapper,
-input[type="datetime-local"]::-webkit-datetime-edit-fields-wrapper {
-  cursor: text;
-}
-
-.te-input[type="date"],
-.te-input[type="datetime-local"] {
-  width: 100%;
-  min-width: 0;
-}
-
-.te-attr-row .te-attr-col:last-of-type {
-  flex: 1 1 0;
-}
-
-/* Responsive improvements for the modal */
-@media (min-width: 768px) {
-  .te-card {
-    max-width: 800px;
-  }
-  #te-dynamic-fields {
-    display: grid;
-    gap: 20px;
-    grid-template-columns: 1fr 1fr;
-  }
-}
-
-@media (min-width: 1200px) {
-  .te-card {
-    max-width: 1100px;
-  }
-  #te-dynamic-fields {
-    grid-template-columns: 1fr 1fr 1fr;
-  }
-}
-
-
 ```
 
 ## Lua Implementation
@@ -626,527 +224,89 @@ local function escapeLuaPattern(s)
     return s:gsub("([%^%$%(%)%%%.%[%]%*%+%-%?])", "%%%1")
 end
 
--- ------------- Task Editor Modal (adapted from TaskManager) -------------
-local function openTaskEditor(taskData)
-    local sessionID = "kb_te_" .. tostring(math.floor(js.window.performance.now()))
-    
-    local existing = js.window.document.getElementById("sb-taskeditor")
-    if existing then existing.remove() end
-
-    -- START of new logic
-    -- Get the full, raw task name, including hashtags and wikilinks, from the source document.
-    local fullName = taskData.name -- Fallback to the clean name from the parser
-
-    -- List of meta-keys that are not custom attributes, used to identify true attributes.
-    -- are never shown as editable fields in the modal editor.
-    local ignoredKeys = {
-      ref = true, tag = true, tags = true, name = true, text = true, page = true, pos = true, range = true,
-      toPos = true, state = true, done = true, itags = true, header = true, links = true,
-      ilinks = true, _kanbanStatusKey = true, _kanbanDoneStatus = true, _kanbanDefaultStatus = true, kanbanHide = true
-    }
-    
-    local content = space.readPage(taskData.page)
-    if content and taskData.pos and taskData.range then
-        local blockStart = taskData.pos + 1
-        local blockLen = taskData.range[2] - taskData.range[1]
-
-        if blockStart > 0 and blockLen > 0 and blockStart + blockLen - 1 <= #content then
-            local taskBlock = content:sub(blockStart, blockStart + blockLen - 1)
-            
-            -- Extract the first line only (name is always on the first line).
-            -- Strip the checkbox prefix, then remove all [key: value] attribute patterns
-            -- regardless of their position (before, after, or mixed with the name).
-            -- [[WikiLinks]] are safe: %[%a requires a letter after [, so [[ never matches.
-            local firstLine = taskBlock:match("^([^\n]*)") or taskBlock
-            local afterCheckbox = firstLine:match("^%s*[%*%-]%s*%[[ xX]?%]%s*(.*)")
-            if afterCheckbox then
-                local cleaned = afterCheckbox
-                cleaned = cleaned:gsub("%[%a[%w_%-]*%s*:[^%]]*%]", "")
-                cleaned = cleaned:match("^%s*(.-)%s*$")
-                if cleaned and cleaned ~= "" then
-                    fullName = cleaned
-                end
-            end
-        end
-    end
-    -- END of new logic
-
-    -- MODIFICATION START: Read kanban config passed by the JS click handler for bidirectional sync
-    local boardStatusKey = tostring(taskData._kanbanStatusKey or "status")
-    local doneStatus     = tostring(taskData._kanbanDoneStatus or "")
-    local defaultStatus  = tostring(taskData._kanbanDefaultStatus or "")
-    -- MODIFICATION END
-
-    local function uniqueHandler(e)
-        if e.detail.session == sessionID then
-            updateTaskRemote(
-                taskData.page, 
-                taskData.pos,
-                taskData.range, 
-                fullName,
-                e.detail.state, 
-                e.detail.text, 
-                e.detail.attributes
-            )
-            js.window.removeEventListener("sb-save-task", uniqueHandler)
-        end
-    end
-    js.window.addEventListener("sb-save-task", uniqueHandler)
-    
-    -- This list is used to determine which fields to show in the editor UI.
-    -- local ignoredKeys is defined above
-    local existingFields = {}
-    for key, value in pairs(taskData) do
-        if not ignoredKeys[key] then
-            if type(value) ~= "table" then -- Attributes can sometimes be parsed as tables
-                 table.insert(existingFields, {
-                    key = tostring(key),
-                    value = tostring(value)
-                })
-            end
-        end
-    end
-
-    local parts = {}
-    for _, f in ipairs(existingFields) do
-        if f.key:lower() ~= "completed" then
-            local safeLabel = string.gsub(tostring(f.key), '"', '\\"')
-            local safeKey = string.gsub(tostring(f.key), '"', '\\"')
-            local safeVal = string.gsub(tostring(f.value), '"', '\\"')
-            safeVal = string.gsub(safeVal, '\n', ' ')
-            table.insert(parts, string.format(
-                [[{ "label": "%s", "key": "%s", "type": "string", "value": "%s" }]], 
-                safeLabel, safeKey, safeVal
-            ))
-        end
-    end
-    local fieldsJSON = "[" .. table.concat(parts, ",") .. "]"
-
-    local taskNameSafe = string.gsub(tostring(fullName or ""), '"', '\\"')
-    taskNameSafe = string.gsub(taskNameSafe, '\n', ' ')
-    local isChecked = (taskData.state == "x" or taskData.state == "X") and "checked" or ""
-    local isHidden = (tostring(taskData.kanbanHide or ""):lower() == "true")
-    local isHiddenChecked = isHidden and "checked" or ""
-
-    local container = js.window.document.createElement("div")
-    container.id = "sb-taskeditor"
-    container.innerHTML = [[
-    <div class="te-card" id="te-card-inner">
-      <div class="te-header">Edit Task Details</div>
-      
-      <div class="te-row">
-        <input type="checkbox" id="te-status-checkbox" class="te-checkbox" ]] .. isChecked .. [[>
-        <label for="te-status-checkbox" style="cursor:pointer">Completed</label>
-        <span style="margin-left: 20px;"></span>
-        <input type="checkbox" id="te-hide-checkbox" class="te-checkbox" ]] .. isHiddenChecked .. [[>
-        <label for="te-hide-checkbox" style="cursor:pointer">Hide / Show Card</label>
-      </div>
-
-      <div class="te-group">
-        <label class="te-label">Task Description</label>
-        <input type="text" id="te-main-input" class="te-input" value="]] .. taskNameSafe .. [[">
-      </div>
-
-      <div id="te-dynamic-fields"></div>
-      
-      <div class="te-attr-row">
-        <div class="te-attr-col">
-          <label class="te-label" style="font-size: 0.8em;">Attr Name</label>
-          <input type="text" id="te-new-key" class="te-input" placeholder="e.g. due, priority">
-        </div>
-        <div class="te-attr-col" style="flex: 0.6;">
-          <label class="te-label" style="font-size: 0.8em;">Type</label>
-          <select id="te-new-type" class="te-attr-select">
-            <option value="string">String</option>
-            <option value="date">Date</option>
-            <option value="datetime">DateTime</option>
-          </select>
-        </div>
-        <div class="te-attr-col">
-          <label class="te-label" style="font-size: 0.8em;">Value</label>
-          <input type="text" id="te-new-val" class="te-input">
-        </div>
-        <button id="te-add-attr-btn" class="te-btn">Add</button>
-      </div>
-
-      <div class="te-actions">
-        <button class="te-btn te-cancel" id="te-cancel-btn">Cancel</button>
-        <button class="te-btn te-save" id="te-save-btn">Save Changes</button>
-      </div>
-    </div>
-    ]]
-
-    js.window.document.body.appendChild(container)
-
-    -- MODIFICATION START: Escape and pass kanban config into the modal JS closure
-    local boardStatusKeySafe = string.gsub(boardStatusKey, '"', '\\"')
-    local doneStatusSafe     = string.gsub(doneStatus,     '"', '\\"')
-    local defaultStatusSafe  = string.gsub(defaultStatus,  '"', '\\"')
-    -- MODIFICATION END
-
-    local script = [[
-    (function() {
-        const session = "]] .. sessionID .. [[";
-        const fields = ]] .. fieldsJSON .. [[;
-        const container = document.getElementById('te-dynamic-fields');
-        const root = document.getElementById('sb-taskeditor');
-        const card = document.getElementById('te-card-inner');
-
-        // MODIFICATION START: Kanban config for bidirectional checkbox <-> status sync
-        const boardStatusKey = "]] .. boardStatusKeySafe .. [[";
-        const doneStatus     = "]] .. doneStatusSafe .. [[";
-        const defaultStatus  = "]] .. defaultStatusSafe .. [[";
-        // MODIFICATION END
-
-        const formatForInput = (val, type) => {
-             if(!val) return "";
-             val = val.trim();
-             if (type === 'datetime-local') return val.replace(" ", "T");
-             if (type === 'date') return val.split("T")[0].split(" ")[0];
-             return val;
-        };
-
-        const createFieldInput = (key, val, type) => {
-            const group = document.createElement('div');
-            group.className = 'te-group';
-            const label = document.createElement('label');
-            label.className = 'te-label';
-            label.innerText = key;
-            const input = document.createElement('input');
-            input.className = 'te-input';
-            input.dataset.key = key;
-
-            if (type === 'datetime') {
-                 input.type = 'datetime-local';
-                 input.value = formatForInput(val, 'datetime-local');
-            } else if (type === 'date') {
-                 input.type = 'date';
-                 input.value = formatForInput(val, 'date');
-            } else {
-                 input.type = 'text';
-                 input.value = val;
-            }
-            group.appendChild(label);
-            group.appendChild(input);
-            container.appendChild(group);
-        };
-
-        fields.forEach(f => {
-            let type = "string";
-            if(f.value.match(/^\d{4}-\d{2}-\d{2}$/)) type = "date";
-            if(f.value.match(/^\d{4}-\d{2}-\d{2} \d{2}:\d{2}$/)) type = "datetime";
-            createFieldInput(f.key, f.value, type);
-        });
-
-        // MODIFICATION START: Bidirectional live sync between checkbox and status attribute
-        if (boardStatusKey && doneStatus) {
-            const checkbox = document.getElementById('te-status-checkbox');
-
-            // Bug 2 fix: on open, if status field already equals doneStatus, check the box
-            if (!checkbox.checked) {
-                const statusInput = container.querySelector('.te-input[data-key="' + boardStatusKey + '"]');
-                if (statusInput && statusInput.value.trim().toLowerCase() === doneStatus.toLowerCase()) {
-                    checkbox.checked = true;
-                }
-            }
-
-            // Bug 1 fix: checkbox → status field (live)
-            checkbox.addEventListener('change', function() {
-                const statusInput = container.querySelector('.te-input[data-key="' + boardStatusKey + '"]');
-                if (statusInput) {
-                    statusInput.value = this.checked ? doneStatus : defaultStatus;
-                }
-            });
-
-            // Bug 2 fix: status field → checkbox (live, via delegation)
-            container.addEventListener('input', function(e) {
-                if (e.target.matches && e.target.matches('.te-input[data-key]') && e.target.dataset.key === boardStatusKey) {
-                    checkbox.checked = (e.target.value.trim().toLowerCase() === doneStatus.toLowerCase());
-                }
-            });
-        }
-        // MODIFICATION END
-
-        const newKeyInp = document.getElementById('te-new-key');
-        const newTypeSel = document.getElementById('te-new-type');
-        const newValInp = document.getElementById('te-new-val');
-
-        newTypeSel.onchange = () => {
-            if(newTypeSel.value === 'date') newValInp.type = 'date';
-            else if(newTypeSel.value === 'datetime') newValInp.type = 'datetime-local';
-            else newValInp.type = 'text';
-        };
-
-        document.getElementById('te-add-attr-btn').onclick = () => {
-            const key = newKeyInp.value.trim();
-            if(!key) return;
-            createFieldInput(key, newValInp.value, newTypeSel.value);
-            newKeyInp.value = "";
-            newValInp.value = "";
-        };
-
-        const cleanup = () => { 
-            window.removeEventListener("keydown", handleKey, true);
-            if(root) root.remove(); 
-        };
-        
-        const save = () => {
-            const newText = document.getElementById('te-main-input').value;
-            let newState = document.getElementById('te-status-checkbox').checked ? "x" : " ";
-            const isHidden = document.getElementById('te-hide-checkbox').checked;
-            const attributes = [];
-            const inputs = container.querySelectorAll('.te-input[data-key]');
-            inputs.forEach(inp => {
-                let val = inp.value;
-                if (inp.type === 'datetime-local' && val.includes("T")) val = val.replace("T", " ");
-                attributes.push({ key: inp.dataset.key, value: val });
-            });
-
-            let hideAttr = attributes.find(a => a.key === 'kanbanHide');
-            if (isHidden) {
-                if (hideAttr) {
-                    hideAttr.value = "true";
-                } else {
-                    attributes.push({ key: 'kanbanHide', value: 'true' });
-                }
-            } else {
-                if (hideAttr) {
-                    hideAttr.value = "";
-                }
-            }
-
-            // MODIFICATION START: Safety-net sync at save time (checkbox state is authoritative
-            // at this point because live sync already kept the two fields in step).
-            // Bug 1: checked → ensure status == doneStatus (add if missing)
-            // Bug 2: unchecked + status was doneStatus → revert status to defaultStatus
-            if (boardStatusKey && doneStatus) {
-                let statusAttr = attributes.find(a => a.key === boardStatusKey);
-                if (newState === "x") {
-                    if (statusAttr) statusAttr.value = doneStatus;
-                    else attributes.push({ key: boardStatusKey, value: doneStatus });
-                } else if (statusAttr && statusAttr.value.trim().toLowerCase() === doneStatus.toLowerCase()) {
-                    statusAttr.value = defaultStatus;
-                }
-            }
-            // MODIFICATION END
-
-            window.dispatchEvent(new CustomEvent("sb-save-task", { 
-                detail: { session: session, text: newText, state: newState, attributes: attributes } 
-            }));
-            cleanup();
-        };
-
-        const handleKey = (e) => {
-            e.stopPropagation();
-            const focusables = card.querySelectorAll('button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])');
-            const first = focusables[0];
-            const last = focusables[focusables.length - 1];
-        
-            if (e.key === "Tab") {
-                if (e.shiftKey) {
-                    if (document.activeElement === first) { last.focus(); e.preventDefault(); }
-                } else {
-                    if (document.activeElement === last) { first.focus(); e.preventDefault(); }
-                }
-            } else if (e.key === "Escape") {
-                cleanup();
-            } else if (e.key === "Enter" && (e.metaKey || e.ctrlKey)) {
-                save();
-            }
-        };
-        
-        window.addEventListener("keydown", handleKey, true);
-        document.getElementById('te-cancel-btn').onclick = cleanup;
-        document.getElementById('te-save-btn').onclick = save;
-
-        // MODIFICATION: Only close if mouse started and ended on the root (background)
-        let rootClickStarted = false;
-        root.onmousedown = (e) => { rootClickStarted = (e.target === root); };
-        root.onmouseup = (e) => {
-            if (rootClickStarted && e.target === root) cleanup();
-            rootClickStarted = false;
-        };
-
-        root.onclick = (e) => { e.stopPropagation(); }; // Prevent bubbling issues
-
-        setTimeout(() => document.getElementById('te-main-input').focus(), 50);
-    })();
-    ]]
-
-    local scriptEl = js.window.document.createElement("script")
-    scriptEl.innerHTML = script
-    container.appendChild(scriptEl)
-end
-
-
--- ------------- Update Task Attributes Function (Updated for AST/Multi-line) -------------
-function updateTaskRemote(pageName, pos, range, originalName, finalState, newText, attributes)
+-- ------------- Update a single key in a page's frontmatter -------------
+function updatePageFrontmatter(pageName, key, value)
     local content = space.readPage(pageName)
     if not content then return end
 
-    -- Use the AST Range to get the EXACT block of this task, preserving newlines
-    local blockStart = pos + 1
-    local blockLen = range[2] - range[1]
-    local taskBlock = content:sub(blockStart, blockStart + blockLen - 1)
+    local val = tostring(value or "")
 
-    -- 1. Update State (Checkbox)
-    -- This regex finds the checkbox [ ] or [x] at the start of the task block
-    local stateMark = "[ ]"
-    if finalState == "x" or finalState == "X" then stateMark = "[x]" end
-    taskBlock = taskBlock:gsub("^(%s*[%*%-]%s*)%[[ xX]?%]", "%1" .. stateMark, 1)
-
-    -- 2. Update Description (Name)
-    -- We replace the first occurrence of the original name with the new text.
-    -- This attempts to preserve the rest of the line or subsequent lines.
-    if originalName and newText and originalName ~= newText then
-         -- Use string.find with plain=true for a literal search, which is safer than using gsub with a pattern.
-         -- This avoids issues with special characters in the task name.
-         local start, finish = string.find(taskBlock, originalName, 1, true)
-         if start then
-             taskBlock = taskBlock:sub(1, start - 1) .. newText .. taskBlock:sub(finish + 1)
-         end
+    -- Write the value as a plain YAML scalar; quote it only when a plain
+    -- scalar would be ambiguous (empty, leading/trailing whitespace,
+    -- ": ", trailing ":", " #", leading "#" or a YAML indicator character)
+    local needsQuotes = val == ""
+        or val:find("^%s") or val:find("%s$")
+        or val:find(": ") or val:find(":$")
+        or val:find(" #") or val:find("^#")
+        or val:find("^[!&*%[%]{}|>%%%@\"'%-]")
+    if needsQuotes then
+        val = '"' .. val:gsub('"', '\\"') .. '"'
     end
 
-    -- 3. Update Attributes (In-Place or Append)
-    for _, attr in ipairs(attributes) do
-        local key = attr.key
-        local val = tostring(attr.value or "")
-        local attrPattern = "%s*%[" .. escapeLuaPattern(key) .. "%s*:%s*.-%]"
+    local newLine = key .. ": " .. val
+    local sep = content:find("\r\n") and "\r\n" or "\n"
 
-        if val == "" then
-            taskBlock = taskBlock:gsub(attrPattern, "")
-        else
-            if val:sub(1,1) == '"' and val:sub(-1,-1) == '"' then
-                val = val:sub(2, -2)
+    -- Detect a frontmatter block (--- ... ---) at the very top of the page
+    local linesStart, closeLineStart, closeLineEnd = nil, nil, nil
+    local firstLineEnd = content:find("\n") or (#content + 1)
+    local firstLine = content:sub(1, firstLineEnd - 1):gsub("\r$", "")
+    if firstLine == "---" then
+        local pos = firstLineEnd + 1
+        while pos <= #content do
+            local lineEnd = content:find("\n", pos) or (#content + 1)
+            local line = content:sub(pos, lineEnd - 1):gsub("\r$", "")
+            if line == "---" then
+                linesStart = firstLineEnd + 1
+                closeLineStart = pos
+                closeLineEnd = lineEnd + 1
+                break
             end
-            local quotedVal = '"' .. val .. '"'
-
-            if key and key ~= "" then
-                 local plainPattern = "(%[" .. escapeLuaPattern(key) .. "%s*:%s*.-%])"
-                 if taskBlock:find(plainPattern) then
-                     taskBlock = taskBlock:gsub(plainPattern, "[" .. key .. ": " .. quotedVal .. "]")
-                 else
-                     taskBlock = taskBlock .. " [" .. key .. ": " .. quotedVal .. "]"
-                 end
-            end
+            if lineEnd > #content then break end
+            pos = lineEnd + 1
         end
     end
 
-    -- 4. Handle "completed" timestamp special logic
-    if config.get("kanban.completedAttribute", true) then
-        local timestamp = os.date("%Y-%m-%d %H:%M")
-        local completedPattern = "(%[completed%s*:%s*.-%])"
-        
-        if finalState == "x" or finalState == "X" then
-            if not taskBlock:find(completedPattern) then
-                 -- MODIFICATION: Wrap completion timestamp in quotes
-                 taskBlock = taskBlock .. '[completed: "' .. timestamp .. '"]'
-            end
-        else
-            -- Task is NOT done. Remove completed tag if it exists anywhere in the block.
-            if taskBlock:find(completedPattern) then
-                taskBlock = taskBlock:gsub(completedPattern, "")
+    local newContent
+    if linesStart then
+        -- Replace the key's line in place, or insert it before the closing fence
+        local fmLines = content:sub(linesStart, closeLineStart - 1)
+        local keyPattern = "^" .. escapeLuaPattern(key) .. "%s*:"
+        local found = false
+        local out = {}
+        for line in fmLines:gmatch("([^\r\n]*)\r?\n") do
+            if line:match(keyPattern) then
+                table.insert(out, newLine)
+                found = true
+            else
+                table.insert(out, line)
             end
         end
-    end
-
-    -- Write back
-    local prefix = content:sub(1, blockStart - 1)
-    local suffix = content:sub(blockStart + blockLen)
-    
-    local finalContent = prefix .. taskBlock .. suffix
-    space.writePage(pageName, finalContent)
-
-    js.window.setTimeout(function()  
-        codeWidget.refreshAll()  -- Refresh Widget after Editing
-    end, 200)
-end
-
--- ------------- Update Task Status for Drag and Drop (Updated for AST/Multi-line) -------------
-function updateTaskStatus(pageName, pos, range, statusKey, newStatus, toggleState)
-    local content = space.readPage(pageName)
-    if not content then return end
-
-    -- AST Calculation: Get specific task block
-    local blockStart = pos + 1
-    local blockLen = range[2] - range[1]
-    
-    -- Safety check: Ensure we aren't going out of bounds
-    if blockStart + blockLen - 1 > #content then
-        return 
-    end
-
-    local taskBlock = content:sub(blockStart, blockStart + blockLen - 1)
-    
-    -- MODIFICATION: Ensure new status is wrapped in quotes
-    local cleanStatus = tostring(newStatus or "")
-    if cleanStatus:sub(1,1) == '"' and cleanStatus:sub(-1,-1) == '"' then
-        cleanStatus = cleanStatus:sub(2, -2)
-    end
-    local quotedStatus = '"' .. cleanStatus .. '"'
-    
-    -- 1. Update Status Attribute
-    -- Find [status: value] anywhere in the multi-line block
-    local attrPattern = "(%[" .. escapeLuaPattern(statusKey) .. "%s*:%s*.-%])"
-    
-    if taskBlock:find(attrPattern) then
-        -- Replace existing tag in-place (preserves position)
-        taskBlock = taskBlock:gsub(attrPattern, "[".. statusKey ..": " .. quotedStatus .. "]")
+        if not found then
+            table.insert(out, newLine)
+        end
+        newContent = "---" .. sep .. table.concat(out, sep) .. sep ..
+            "---" .. sep .. content:sub(closeLineEnd)
     else
-        -- Append to end if not found
-        taskBlock = taskBlock .. " [".. statusKey ..": " .. quotedStatus .. "]"
+        -- No frontmatter yet: create a block at the top of the page
+        local gap = content:match("^\r?\n") and "" or sep
+        newContent = "---" .. sep .. newLine .. sep .. "---" .. sep .. gap .. content
     end
 
-    -- 2. Update Checkbox State if requested
-    if toggleState == "checked" then
-         taskBlock = taskBlock:gsub("^(%s*[%*%-]%s*)%[[ xX]?%]", "%1[x]", 1)
-    elseif toggleState == "unchecked" then
-         taskBlock = taskBlock:gsub("^(%s*[%*%-]%s*)%[[xX]%]", "%1[ ]", 1)
-    end
+    space.writePage(pageName, newContent)
 
-    -- 3. Handle "completed" timestamp special logic (mirrors updateTaskRemote)
-    if config.get("kanban.completedAttribute", true) then
-        local timestamp = os.date("%Y-%m-%d %H:%M")
-        local completedPattern = "(%[completed%s*:%s*.-%])"
-
-        if toggleState == "checked" then
-            if not taskBlock:find(completedPattern) then
-                taskBlock = taskBlock .. '[completed: "' .. timestamp .. '"]'
-            end
-        else
-            if taskBlock:find(completedPattern) then
-                taskBlock = taskBlock:gsub(completedPattern, "")
-            end
-        end
-    end
-
-    -- Write back using specific range
-    local prefix = content:sub(1, blockStart - 1)
-    local suffix = content:sub(blockStart + blockLen)
-    
-    local finalContent = prefix .. taskBlock .. suffix
-    space.writePage(pageName, finalContent)
-
-    js.window.setTimeout(function()  
-         codeWidget.refreshAll() -- Refresh widget after Drag and Drop
+    js.window.setTimeout(function()
+        codeWidget.refreshAll()  -- Refresh widget after the frontmatter update
     end, 200)
 end
 
 -- ------------- Event Listeners -------------
 if not js.window.kanbanListenersAdded then
-    js.window.addEventListener("sb-kanban-edit-task", function(e)
-      openTaskEditor(e.detail)
-    end)
-
     js.window.addEventListener("sb-kanban-dnd-update", function(e)
         if e.detail and e.detail.action == "move" then
-            updateTaskStatus(
-                e.detail.page, 
-                e.detail.pos, 
-                e.detail.range, -- PASSING RANGE
-                e.detail.statusKey, 
-                e.detail.newStatus, 
-                e.detail.toggleState
+            updatePageFrontmatter(
+                e.detail.page,
+                e.detail.statusKey,
+                e.detail.newStatus
             )
         end
     end)
@@ -1154,20 +314,20 @@ if not js.window.kanbanListenersAdded then
 end
 
 -- ------------- Main Kanban Board Function -------------
-function KanbanBoard(taskQuery, options)
-    -- List of meta-keys that are not custom attributes, used to identify true attributes.
-    local ignoredKeys = {
-      ref = true, tag = true, tags = true, name = true, text = true, page = true, pos = true, range = true,
-      toPos = true, state = true, done = true, itags = true, header = true, links = true,
-      ilinks =true, kanbanHide = true
-    }
+function KanbanBoard(pageQuery, options)
+    -- Normalizes a tag: strips a leading '#', trims and lowercases
+    local function normalizeTag(t)
+        local s = tostring(t):gsub("^#", "")
+        return (s:gsub("^%s*(.-)%s*$", "%1"):lower())
+    end
+
     local statusKey = "status"
-    local sortDefault = nil -- default sort field, set via {"SortDefault", "fieldname"}
     local columnOrder = {}
     local columnTitles = {}
     local columnColors = {} -- optional accent color per column, set via 3rd element in Columns config
-    local fields = {} -- New: For custom fields
+    local fields = {} -- for custom fields
     local hideKeys = {} -- field keys whose label is hidden on cards, set via {"HideKeys", {"key1","key2"}}
+    local requiredTags = {} -- a page must carry all of these frontmatter tags, set via {"Tags", {"tag1","tag2"}}
 
     for _, opt in ipairs(options) do
         if opt[1] == "Column" then statusKey = opt[2] end
@@ -1176,137 +336,79 @@ function KanbanBoard(taskQuery, options)
           for _, colData in ipairs(cols) do
             local status = tostring(colData[1]):gsub("^%s*(.-)%s*$", "%1")
                 status = status:lower()
-            local title = colData[2]
             table.insert(columnOrder, status)
-            columnTitles[status] = title
+            columnTitles[status] = colData[2]
             if colData[3] and colData[3] ~= "" then -- optional accent color
                 columnColors[status] = tostring(colData[3])
             end
           end
         end
-        if opt[1] == "SortDefault" then sortDefault = opt[2] end -- read SortDefault option
-        if opt[1] == "Fields" then fields = opt[2] or {} end -- New
+        if opt[1] == "Fields" then fields = opt[2] or {} end
         if opt[1] == "HideKeys" then -- build a lookup set of keys whose label to hide on cards
             for _, k in ipairs(opt[2] or {}) do
                 hideKeys[tostring(k)] = true
             end
         end
-    end
-
-    local tasksByStatus = {}
-    for _, status in ipairs(columnOrder) do
-        tasksByStatus[status] = {}
+        if opt[1] == "Tags" then -- build a lookup set of required frontmatter tags
+            for _, t in ipairs(opt[2] or {}) do
+                local tag = normalizeTag(t)
+                if tag ~= "" then
+                    table.insert(requiredTags, tag)
+                end
+            end
+        end
     end
 
     if #columnOrder == 0 then return widget.new{ display="block", html="<p>Error: No columns defined for Kanban board.</p>" } end
 
-    for t in taskQuery do
-        local raw_status = t[statusKey] or columnOrder[1]
-        local status = tostring(raw_status):gsub("^%s*(.-)%s*$", "%1")
-              status = status:lower()
-        
-        if tasksByStatus[status] then
-            table.insert(tasksByStatus[status], t)
-        else
-            -- If it doesn't have a status or is unknown, move to first column
-            table.insert(tasksByStatus[columnOrder[1]], t)
+    -- A page is shown only if it carries ALL required tags in its frontmatter
+    local function hasRequiredTags(p)
+        if #requiredTags == 0 then return true end
+        local own = {}
+        local raw = p.tags
+        if type(raw) == "string" then raw = { raw } end
+        if type(raw) == "table" then
+            for _, t in ipairs(raw) do
+                own[normalizeTag(t)] = true
+            end
+        end
+        for _, req in ipairs(requiredTags) do
+            if not own[req] then return false end
+        end
+        return true
+    end
+
+    local pagesByStatus = {}
+    for _, status in ipairs(columnOrder) do
+        pagesByStatus[status] = {}
+    end
+
+    for p in pageQuery do
+        if hasRequiredTags(p) then
+            local raw_status = p[statusKey] or columnOrder[1]
+            local status = tostring(raw_status):gsub("^%s*(.-)%s*$", "%1")
+                  status = status:lower()
+
+            if pagesByStatus[status] then
+                table.insert(pagesByStatus[status], p)
+            else
+                -- If it doesn't have a status or is unknown, move to first column
+                table.insert(pagesByStatus[columnOrder[1]], p)
+            end
         end
     end
 
-    -- MODIFICATION: boardId must be unique across the whole session, not just within a
-    -- single render. math.random(100000) only had 100k possible values, so navigating /
-    -- re-rendering the same directive repeatedly (which happens a lot in normal use)
-    -- could regenerate an ID that collided with an old, detached, still-hidden board div
-    -- from a previous render. document.getElementById() then returned that stale node
-    -- instead of the current one, the init/reveal script ran against the wrong element,
-    -- and the actual visible board was left stuck at visibility:hidden forever.
-    -- os.time() + a wide random range makes collisions practically impossible.
-    local boardId = "kanban-" .. tostring(os.time()) .. "-" .. tostring(math.random(100000000, 999999999))
+    -- The root wrapper carries the board config as data attributes; a single
+    -- session-persistent delegated event engine (installed once, see jsCode
+    -- below) operates on any board instance purely from the DOM. This keeps
+    -- drag & drop working even when SilverBullet re-renders or replaces this
+    -- widget's DOM without re-invoking this Lua function.
+    local html = '<div data-kanban-root="true" data-status-key="' .. statusKey .. '">'
+    html = html .. '<div class="kanban-board">'
 
-    -- Build sort options: SortDefault first (if set), then "name", then remaining fields
-    local sortFields = {}
-    local seenSortFields = {}
-    if sortDefault and sortDefault ~= "" then
-        table.insert(sortFields, sortDefault)
-        seenSortFields[sortDefault] = true
-    end
-    if not seenSortFields["name"] then
-        table.insert(sortFields, "name")
-        seenSortFields["name"] = true
-    end
-    for _, f in ipairs(fields) do
-        if f and not seenSortFields[f] then
-            table.insert(sortFields, f)
-            seenSortFields[f] = true
-        end
-    end
-
-    local sortOptionsHtml = ""
-    for _, f in ipairs(sortFields) do
-        local label = f:sub(1,1):upper() .. f:sub(2):gsub("_", " ")
-        sortOptionsHtml = sortOptionsHtml .. "<option value='" .. f .. "'>" .. label .. "</option>"
-    end
-
-    -- MODIFICATION START: Serialize columnOrder to JSON for the board JS so the click handler
-    -- can pass doneStatus / defaultStatus to the task editor (needed for Bug 1 & 2 fixes).
-    local columnOrderParts = {}
-    for _, s in ipairs(columnOrder) do
-        table.insert(columnOrderParts, '"' .. s:gsub('"', '\\"') .. '"')
-    end
-    local columnOrderJson = "[" .. table.concat(columnOrderParts, ",") .. "]"
-    -- MODIFICATION END
-
-    -- Controls bar (filter + sort) — MODIFICATION: pagination removed, it is not used in the Kanban Board
-    -- MODIFICATION START: Added reset filter button to clear the persisted filter state
-    local controlsHtml = [[
-    <div class="kanban-controls">
-      <div class="kanban-filter-container">
-        <label class="kanban-filter-label">Filter: </label>
-        <input type="text" class="kanban-search-input" placeholder="Search tasks...">
-        <button class="kanban-reset-filter-btn" title="Reset filter">✕</button>
-        <button class="kanban-toggle-hidden-btn kanban-reset-filter-btn" title="Show hidden cards"><svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-eye-icon lucide-eye"><path d="M2.062 12.348a1 1 0 0 1 0-.696 10.75 10.75 0 0 1 19.876 0 1 1 0 0 1 0 .696 10.75 10.75 0 0 1-19.876 0"/><circle cx="12" cy="12" r="3"/></svg></button>
-      </div>
-      <div class="kanban-sort-container">
-        <label class="kanban-sort-label">Order by: </label>
-        <select class="kanban-sort-select">
-    ]] .. sortOptionsHtml .. [[
-        </select>
-        <div class="kanban-sort-buttons">
-          <button class="kanban-sort-btn active" data-dir="asc" title="Sort A-Z">A-Z</button>
-          <button class="kanban-sort-btn" data-dir="desc" title="Sort Z-A">Z-A</button>
-        </div>
-      </div>
-    </div>
-    ]]
-    -- MODIFICATION END
-    
-    -- MODIFICATION: board config embedded as data attributes on the root wrapper so a
-    -- single, session-persistent delegated event engine (installed once, see jsCode below)
-    -- can operate on ANY board instance purely from the DOM, without needing "its own"
-    -- per-render script to have successfully run. This is what makes buttons/drag-drop
-    -- keep working even when SilverBullet reuses/replaces this widget's DOM without
-    -- re-invoking this Lua function (e.g. after toggling the raw-source edit view).
-    local columnOrderAttr = columnOrderJson:gsub('"', '&quot;')
-    local html = '<div id="' .. boardId .. '" data-kanban-root="true" data-status-key="' .. statusKey .. '" data-column-order="' .. columnOrderAttr .. '">'
-    html = html .. controlsHtml
-    -- MODIFICATION START: Only hide the board if there's an active persisted filter that
-    -- needs to be reapplied on init. Previously the board was ALWAYS rendered hidden and
-    -- relied on the injected script to reveal it later — but this directive re-evaluates
-    -- on every live-preview update (e.g. every keystroke while editing Lua source
-    -- elsewhere on this same page), and each re-evaluation replaces the board with a
-    -- fresh hidden copy + a fresh reveal script. If re-renders keep happening faster than
-    -- a given script/observer can finish, the board can be left permanently hidden.
-    -- Since Space Lua runs client-side, we can read js.window._kanbanFilterState directly
-    -- here and skip hiding entirely when there's nothing to reapply — which is the vast
-    -- majority of renders. This removes almost all exposure to that race.
-    local hasActiveFilter = js.window._kanbanFilterState ~= nil and js.window._kanbanFilterState ~= ""
-    local hiddenStyle = hasActiveFilter and ' style="visibility:hidden"' or ''
-    html = html .. '<div class="kanban-board"' .. hiddenStyle .. '>'
-    -- MODIFICATION END
-    
     for _, status in ipairs(columnOrder) do
         local title = columnTitles[status]
-        local tasks = tasksByStatus[status]
+        local pages = pagesByStatus[status]
 
         -- Build optional color class and inline CSS variable for this column
         local colorAttr = ""
@@ -1315,145 +417,25 @@ function KanbanBoard(taskQuery, options)
         end
 
         html = html .. '<div class="kanban-column' .. colorAttr .. '" data-status="' .. status .. '">'
-        -- MODIFICATION START: Count is wrapped in a span so updateDisplay() can live-update it
-        html = html .. '<div class="kanban-column-title">' .. title .. ' (<span class="kanban-col-count">' .. #tasks .. '</span>)</div>'
-        -- MODIFICATION END
+        html = html .. '<div class="kanban-column-title">' .. title .. ' (<span class="kanban-col-count">' .. #pages .. '</span>)</div>'
         html = html .. '<div class="kanban-cards">'
-        
-        for _, task in ipairs(tasks) do
-        
-            -- [[ MODIFICATION START: Backwards compatibility for stable release (missing range) ]] --
-            -- If 'range' is missing (stable release), but we have 'pos' and 'toPos',
-            -- we construct the range manually so it gets serialized into the JSON below.
-            if not task.range and task.pos and task.toPos then
-                task.range = { task.pos, task.toPos }
-            end
-            -- [[ MODIFICATION END ]] --
-            
-            -- START: New logic to get full task name for card display
-            -- This parses the name from the source document to include hashtags, etc. on the card.
-            local fullName = task.name -- Fallback
 
-            local content = space.readPage(task.page)
-            if content and task.pos and task.range then
-                local blockStart = task.pos + 1
-                local blockLen = task.range[2] - task.range[1]
+        for _, p in ipairs(pages) do
+            local pageName = tostring(p.name or "")
+            pageName = pageName:gsub('"', '&quot;')
+            pageName = pageName:gsub('<', '&lt;')
+            pageName = pageName:gsub('>', '&gt;')
 
-                if blockStart > 0 and blockLen > 0 and blockStart + blockLen - 1 <= #content then
-                    local taskBlock = content:sub(blockStart, blockStart + blockLen - 1)
+            html = html .. '<div class="kanban-card" draggable="true" data-page="' .. pageName .. '">'
 
-                    -- Extract the first line only (name is always on the first line).
-                    -- Strip the checkbox prefix, then remove all [key: value] attribute patterns
-                    -- regardless of their position (before, after, or mixed with the name).
-                    -- [[WikiLinks]] are safe: %[%a requires a letter after [, so [[ never matches.
-                    local firstLine = taskBlock:match("^([^\n]*)") or taskBlock
-                    local afterCheckbox = firstLine:match("^%s*[%*%-]%s*%[[ xX]?%]%s*(.*)")
-                    if afterCheckbox then
-                        local cleaned = afterCheckbox
-                        cleaned = cleaned:gsub("%[%a[%w_%-]*%s*:[^%]]*%]", "")
-                        cleaned = cleaned:match("^%s*(.-)%s*$")
-                        if cleaned and cleaned ~= "" then
-                            fullName = cleaned
-                        end
-                    end
-                end
-            end
-            
-            -- END: New logic
-            local taskName = (fullName or "")
-            taskName = taskName:gsub('"', '&quot;')
-            taskName = taskName:gsub('<', '&lt;')
-            taskName = taskName:gsub('>', '&gt;')
+            -- Clickable Title
+            html = html .. '<a class="kanban-card-name" draggable="false" href="/' .. pageName .. '" data-ref="/' .. pageName .. '" title="' .. pageName .. '">' .. pageName .. '</a>'
 
-            local taskPage = task.page
-            local taskPos = task.pos
-            local taskRef = task.ref
-            
-            local jsonParts = {}
-            for k, v in pairs(task) do
-                local key = tostring(k)
-                key = key:gsub('"', '\\"')
-                local keyStr = '"' .. key .. '"'
-
-                local valStr
-                if type(v) == "number" then
-                    valStr = tostring(v)
-                elseif type(v) == "boolean" then
-                    valStr = v and "true" or "false"
-                elseif type(v) == "table" then
-                      -- Handle tables (like Range)
-                      if key == "range" then
-                          valStr = "[" .. table.concat(v, ",") .. "]"
-                      else
-                          local s = tostring(v)
-                          -- MODIFICATION: Avoiding chaining
-                          s = s:gsub('\\', '\\\\')
-                          s = s:gsub('"', '\\"')
-                          valStr = '"' .. s .. '"'
-                      end
-                else
-                    local s = tostring(v)
-                    -- MODIFICATION: Avoiding chaining
-                    s = s:gsub('\\', '\\\\')
-                    s = s:gsub('"', '\\"')
-                    s = s:gsub('\n', '\\n')
-                    valStr = '"' .. s .. '"'
-                end
-                table.insert(jsonParts, keyStr .. ":" .. valStr)
-            end
-            local taskJson = "{" .. table.concat(jsonParts, ",") .. "}"
-            local taskJsonSafe = tostring(taskJson):gsub('"', '&quot;')
-
-            -- Build filter content string for search (name + all visible field values)
-            local filterParts = {string.lower(tostring(fullName or ""))}
-            for _, fieldKey in ipairs(fields) do
-                local fv = task[fieldKey]
-                if fv then
-                    if type(fv) == "table" then
-                        table.insert(filterParts, string.lower(table.concat(fv, " ")))
-                    else
-                        table.insert(filterParts, string.lower(tostring(fv)))
-                    end
-                end
-            end
-            local filterContent = table.concat(filterParts, " ")
-                  filterContent = filterContent:gsub('"', '&quot;')
-
-            -- Build sort data attributes for all sortable fields
-            local sortDataAttr = ' data-sort-name="' .. taskName .. '"'
-            for _, f in ipairs(sortFields) do
-                if f ~= "name" then
-                    local sv = task[f]
-                    if sv == nil then sv = "" end
-                    if type(sv) == "table" then sv = table.concat(sv, ", ") end
-                    local svSafe = tostring(sv):gsub("'", "&#39;")
-                    sortDataAttr = sortDataAttr .. " data-sort-" .. f .. "='" .. svSafe .. "'"
-                end
-            end
-
-            -- The card itself is no longer the draggable item if it's a link
-            html = html .. '<div class="kanban-card-wrapper">'
-            
-            local isHidden = tostring(task.kanbanHide or ""):lower() == "true"
-
-            html = html .. '<div class="kanban-card" draggable="true" ' ..
-                'data-task-page="' .. taskPage .. '" ' ..
-                'data-task-pos="' .. taskPos .. '" ' ..
-                'data-task-json="' .. taskJsonSafe .. '" ' ..
-                'data-filter="' .. filterContent .. '"' ..
-                sortDataAttr ..
-                (isHidden and ' data-kanban-hidden="true"' or '') .. '>'
-            
-            html = html .. '<div class="kanban-card-edit">✎</div>'
-
-            -- Clickable Title - MODIFICATION: added draggable="false" to prevent browser default drag behavior on link
-            html = html .. '<a class="kanban-card-name" draggable="false" href="/' .. taskRef .. '" data-ref="/' .. taskRef .. '" title="'..taskName..'">' .. taskName .. '</a>'
-            
             -- Custom Fields
             if #fields > 0 then
                 html = html .. '<div class="kanban-card-fields">'
                 for _, fieldKey in ipairs(fields) do
-                    local fieldValue = task[fieldKey]
+                    local fieldValue = p[fieldKey]
                     if fieldValue then
                         -- Render key label only when it is not in the hideKeys lookup
                         local keyHtml = ""
@@ -1462,8 +444,8 @@ function KanbanBoard(taskQuery, options)
                         end
 
                         local valueHtml = ""
-                        -- MODIFICATION START: Render "tag" field as SilverBullet hashtag links
                         if fieldKey == "tags" then
+                            -- Render the tags field as SilverBullet hashtag links
                             local tagList = {}
                             if type(fieldValue) == "table" then
                                 tagList = fieldValue
@@ -1478,20 +460,16 @@ function KanbanBoard(taskQuery, options)
                                 table.insert(tagHtmlParts, tagLink)
                             end
                             valueHtml = table.concat(tagHtmlParts, " ")
-                        -- MODIFICATION END
                         else
                             if type(fieldValue) == "table" then fieldValue = table.concat(fieldValue, ", ") end
                             local rawVal = tostring(fieldValue)
-                            -- MODIFICATION START: Render any #hashtag tokens inside field values
-                            -- as SilverBullet hashtag links. Non-hashtag segments are wrapped in
-                            -- a plain <span>. This is intentionally separate from the "tags" key
-                            -- logic above, which handles tag arrays that have no leading #.
-                           -- if rawVal:find("#[%w_%-]+") then
-                                if rawVal:find("#[^%s%[%]%(%)%{%}%<>\"',;:!?@#\\/]+") then
+                            -- Render any #hashtag tokens inside field values
+                            -- as SilverBullet hashtag links. Non-hashtag segments
+                            -- are wrapped in a plain <span>.
+                            if rawVal:find("#[^%s%[%]%(%)%{%}%<>\"',;:!?@#\\/]+") then
                                 local hashParts = {}
                                 local scanPos = 1
                                 while scanPos <= #rawVal do
-                                    -- local s, e, tag = rawVal:find("#([%w_%-]+)", scanPos)
                                     local s, e, tag = rawVal:find("#([^%s%[%]%(%)%{%}%<>\"',;:!?@#\\/]+)", scanPos)
                                     if s then
                                         if s > scanPos then
@@ -1509,403 +487,154 @@ function KanbanBoard(taskQuery, options)
                             else
                                 valueHtml = '<span class="kanban-field-value">' .. rawVal .. '</span>'
                             end
-                            -- MODIFICATION END
                         end
 
                         html = html .. '<div class="kanban-card-field">' ..
-                           keyHtml ..
-                           valueHtml ..
-                           '</div>'
+                            keyHtml ..
+                            valueHtml ..
+                            '</div>'
                     end
                 end
                 html = html .. '</div>'
             end
-            
+
             html = html .. '</div>' -- close kanban-card
-            html = html .. '</div>' -- close kanban-card-wrapper
         end
-        
-        html = html .. '</div></div>'
+
+        html = html .. '</div></div>' -- close kanban-cards + kanban-column
     end
-    
+
     html = html .. '</div>' -- close kanban-board
-    html = html .. '</div>' -- close boardId wrapper
-    
+    html = html .. '</div>' -- close root wrapper
+
     local jsCode = [[
     (function() {
-        // ============================================================
-        // MODIFICATION: Rearchitected from a per-render closure to a single,
-        // session-persistent, event-delegation engine.
-        //
-        // Root cause being fixed: SilverBullet can replace/re-insert this
-        // widget's DOM (e.g. toggling the raw source edit view) without
-        // reliably re-invoking this Lua function in lockstep, so a freshly
-        // appended <script> matched to "its own" boardId is not a dependable
-        // way to wire up behavior for whatever board is currently on screen.
-        // That produced two symptoms: the board stuck at visibility:hidden,
-        // and later, board rendered fine but every button dead (the script
-        // that should have wired it up simply never ran for that DOM).
-        //
-        // Fix: attach every interactive listener ONCE EVER, on `document`,
-        // via delegation — resolving which board an event belongs to at
-        // event time via closest('[data-kanban-root]') — plus a single
-        // persistent MutationObserver (also installed once ever) that
-        // initializes any `.kanban-board` it finds, whenever it appears,
-        // for the lifetime of the page. This no longer depends on any
-        // particular script instance succeeding.
-        // ============================================================
-
-        const boardId = "]] .. boardId .. [[";
-
-        const eyeIcon = `<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-eye-icon lucide-eye"><path d="M2.062 12.348a1 1 0 0 1 0-.696 10.75 10.75 0 0 1 19.876 0 1 1 0 0 1 0 .696 10.75 10.75 0 0 1-19.876 0"/><circle cx="12" cy="12" r="3"/></svg>`;
-        const eyeOffIcon = `<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-eye-off-icon lucide-eye-off"><path d="M10.733 5.076a10.744 10.744 0 0 1 11.205 6.575 1 1 0 0 1 0 .696 10.747 10.747 0 0 1-1.444 2.49"/><path d="M14.084 14.158a3 3 0 0 1-4.242-4.242"/><path d="M17.479 17.499a10.75 10.75 0 0 1-15.417-5.151 1 1 0 0 1 0-.696 10.75 10.75 0 0 1 4.446-5.143"/><path d="m2 2 20 20"/></svg>`;
+        // Drag & drop engine: installed once per session, operating via event
+        // delegation on document. It resolves which board an event belongs to
+        // at event time via closest('[data-kanban-root]'), so it keeps working
+        // when SilverBullet re-renders or replaces this widget's DOM without
+        // re-invoking the Lua function.
+        if (window.kanbanEngineInstalled) return;
+        window.kanbanEngineInstalled = true;
 
         const getRoot = (el) => (el && el.closest) ? el.closest('[data-kanban-root]') : null;
 
-        const updateDisplay = (root) => {
-            const board = root.querySelector(".kanban-board");
-            const input = root.querySelector(".kanban-search-input");
-            const sortSelect = root.querySelector(".kanban-sort-select");
-            if (!board || !input || !sortSelect) return;
+        let draggedCard = null;
+        let sourceColumn = null;
+        let isDragging = false;
+        let dragTimer = null;
+        let touchStartX, touchStartY;
 
-            const showHidden = board.classList.contains("show-hidden");
-            const rawQuery = input.value.toLowerCase().trim();
-            const keywords = rawQuery.split(/\s+/).filter(k => k.length > 0);
-            const sortField = sortSelect.value;
-            const sortDirection = root.dataset.sortDirection || "asc";
-
-            const allWrappers = Array.from(board.querySelectorAll(".kanban-card-wrapper"));
-
-            const filtered = allWrappers.filter(wrapper => {
-                const card = wrapper.querySelector(".kanban-card");
-                if (!card) return false;
-                if (!showHidden && card.dataset.kanbanHidden === "true") return false;
-                const data = card.getAttribute("data-filter") || "";
-                return keywords.every(word => data.includes(word));
-            });
-
-            const columns = Array.from(board.querySelectorAll(".kanban-column"));
-            columns.forEach(col => {
-                const cardsContainer = col.querySelector(".kanban-cards");
-                if (!cardsContainer) return;
-
-                const colWrappers = filtered.filter(w => cardsContainer.contains(w));
-                const allColWrappers = Array.from(cardsContainer.querySelectorAll(".kanban-card-wrapper"));
-
-                allColWrappers.forEach(w => { w.style.display = "none"; });
-
-                colWrappers.sort((a, b) => {
-                    const cardA = a.querySelector(".kanban-card");
-                    const cardB = b.querySelector(".kanban-card");
-                    if (!cardA || !cardB) return 0;
-
-                    let valA = cardA.getAttribute("data-sort-" + sortField) || "";
-                    let valB = cardB.getAttribute("data-sort-" + sortField) || "";
-
-                    const numA = parseFloat(valA.replace(/[^0-9.]/g, ''));
-                    const numB = parseFloat(valB.replace(/[^0-9.]/g, ''));
-                    if (!isNaN(numA) && !isNaN(numB)) {
-                        return sortDirection === "asc" ? numA - numB : numB - numA;
-                    }
-
-                    return sortDirection === "asc"
-                        ? valA.localeCompare(valB)
-                        : valB.localeCompare(valA);
-                });
-
-                colWrappers.forEach((w, idx) => {
-                    w.style.display = "";
-                    w.style.order = idx;
-                });
-
-                const countEl = col.querySelector(".kanban-col-count");
-                if (countEl) countEl.textContent = colWrappers.length;
-            });
+        const recount = (column) => {
+            const countEl = column.querySelector('.kanban-col-count');
+            if (countEl) countEl.textContent = column.querySelectorAll('.kanban-card').length;
         };
 
-        const syncCheckedTasks = (root) => {
-            const board = root.querySelector(".kanban-board");
-            let columnOrder = [];
-            try { columnOrder = JSON.parse(root.dataset.columnOrder || "[]"); } catch(err) {}
-            if (!board || columnOrder.length === 0) return;
+        const dispatchMove = (root, card, column) => {
             const statusKey = root.dataset.statusKey;
-            const doneStatus = columnOrder[columnOrder.length - 1];
-            const defaultStatus = columnOrder[0];
-            const doneColumn = board.querySelector('.kanban-column[data-status="' + doneStatus + '"]');
-            const defaultColumn = board.querySelector('.kanban-column[data-status="' + defaultStatus + '"]');
-            if (!doneColumn || !defaultColumn) return;
-            const doneCardsContainer = doneColumn.querySelector('.kanban-cards');
-            const defaultCardsContainer = defaultColumn.querySelector('.kanban-cards');
-            if (!doneCardsContainer || !defaultCardsContainer) return;
+            const newStatus = column.dataset.status;
+            const page = card.dataset.page;
 
-            const allCards = Array.from(board.querySelectorAll('.kanban-card'));
-            allCards.forEach(card => {
-                const column = card.closest('.kanban-column');
-                if (!column) return;
-                const currentStatus = column.dataset.status;
+            // Dropped in the same column: nothing to persist
+            if (sourceColumn === column) return;
 
-                try {
-                    const taskData = JSON.parse(card.dataset.taskJson);
-                    const isChecked = (taskData.state === 'x' || taskData.state === 'X');
-                    const range = taskData.range;
+            if (sourceColumn) recount(sourceColumn);
+            recount(column);
 
-                    if (isChecked && currentStatus !== doneStatus) {
-                        doneCardsContainer.appendChild(card.closest('.kanban-card-wrapper'));
-                        if (taskData.page && taskData.pos != null && range) {
-                            window.dispatchEvent(new CustomEvent("sb-kanban-dnd-update", {
-                                detail: { action: "move", page: taskData.page, pos: taskData.pos, range: range, statusKey: statusKey, newStatus: doneStatus, toggleState: "checked" }
-                            }));
-                        }
-                    } else if (!isChecked && currentStatus === doneStatus) {
-                        defaultCardsContainer.appendChild(card.closest('.kanban-card-wrapper'));
-                        if (taskData.page && taskData.pos != null && range) {
-                            window.dispatchEvent(new CustomEvent("sb-kanban-dnd-update", {
-                                detail: { action: "move", page: taskData.page, pos: taskData.pos, range: range, statusKey: statusKey, newStatus: defaultStatus, toggleState: "unchecked" }
-                            }));
-                        }
-                    }
-                } catch(err) { console.error("syncCheckedTasks error", err); }
-            });
-        };
-
-        const initBoard = (board) => {
-            if (!board || board.dataset.kanbanInit === "1") return;
-            const root = getRoot(board);
-            if (!root) return;
-            const input = root.querySelector(".kanban-search-input");
-            if (!input) return; // not fully mounted yet; the persistent observer will retry
-
-            board.dataset.kanbanInit = "1";
-
-            if (window._kanbanFilterState) {
-                input.value = window._kanbanFilterState;
+            if (page && newStatus) {
+                window.dispatchEvent(new CustomEvent("sb-kanban-dnd-update", {
+                    detail: { action: "move", page: page, statusKey: statusKey, newStatus: newStatus }
+                }));
             }
-
-            syncCheckedTasks(root);
-            updateDisplay(root);
-            board.style.visibility = "visible";
         };
 
-        if (!window.kanbanEngineInstalled) {
-            window.kanbanEngineInstalled = true;
+        document.addEventListener("dragstart", (e) => {
+            if (!e.target.classList || !e.target.classList.contains('kanban-card')) return;
+            draggedCard = e.target;
+            sourceColumn = e.target.closest('.kanban-column');
+            setTimeout(() => { e.target.style.opacity = '0.5'; }, 0);
+        });
 
-            let draggedCard = null;
-            let sourceColumn = null;
-            let isDragging = false;
-            let dragTimer = null;
-            let touchStartX, touchStartY;
+        document.addEventListener("dragend", () => {
+            if (draggedCard) {
+                draggedCard.style.opacity = '';
+                draggedCard = null;
+                sourceColumn = null;
+            }
+        });
 
-            const dispatchMove = (root, card, column) => {
-                const statusKey = root.dataset.statusKey;
-                const newStatus = column.dataset.status;
-                const page = card.dataset.taskPage;
-                const pos = parseInt(card.dataset.taskPos, 10);
-                let range = null;
-                try { range = JSON.parse(card.dataset.taskJson).range; } catch(err) {}
-                const allColumns = Array.from(root.querySelectorAll('.kanban-column'));
-                const isLastColumn = allColumns.indexOf(column) === allColumns.length - 1;
-                const toggleState = isLastColumn ? "checked" : "unchecked";
+        document.addEventListener("dragover", (e) => {
+            if (getRoot(e.target)) e.preventDefault();
+        });
 
-                if (sourceColumn && sourceColumn !== column) {
-                    const sourceCount = sourceColumn.querySelector('.kanban-col-count');
-                    const sourceVisible = Array.from(sourceColumn.querySelectorAll('.kanban-card-wrapper')).filter(w => w.style.display !== 'none').length;
-                    if (sourceCount) sourceCount.textContent = sourceVisible;
-                }
-                const destCount = column.querySelector('.kanban-col-count');
-                const destVisible = Array.from(column.querySelectorAll('.kanban-card-wrapper')).filter(w => w.style.display !== 'none').length;
-                if (destCount) destCount.textContent = destVisible;
+        document.addEventListener("drop", (e) => {
+            const root = getRoot(e.target);
+            if (!root || !draggedCard) return;
+            e.preventDefault();
+            const column = e.target.closest('.kanban-column');
+            if (!column) return;
+            column.querySelector('.kanban-cards').appendChild(draggedCard);
+            dispatchMove(root, draggedCard, column);
+        });
 
-                if (page && !isNaN(pos) && newStatus && range) {
-                    window.dispatchEvent(new CustomEvent("sb-kanban-dnd-update", {
-                        detail: { action: "move", page: page, pos: pos, range: range, statusKey: statusKey, newStatus: newStatus, toggleState: toggleState }
-                    }));
-                }
-            };
-
-            document.addEventListener("input", (e) => {
-                if (!e.target.classList || !e.target.classList.contains("kanban-search-input")) return;
-                const root = getRoot(e.target);
-                if (!root) return;
-                window._kanbanFilterState = e.target.value;
-                updateDisplay(root);
-            });
-
-            document.addEventListener("change", (e) => {
-                if (!e.target.classList || !e.target.classList.contains("kanban-sort-select")) return;
-                const root = getRoot(e.target);
-                if (root) updateDisplay(root);
-            });
-
-            document.addEventListener("click", (e) => {
-                const root = getRoot(e.target);
-                if (!root) return;
-
-                const sortBtn = e.target.closest(".kanban-sort-btn");
-                if (sortBtn) {
-                    e.preventDefault();
-                    root.querySelectorAll(".kanban-sort-btn").forEach(b => b.classList.remove("active"));
-                    sortBtn.classList.add("active");
-                    root.dataset.sortDirection = sortBtn.getAttribute("data-dir");
-                    updateDisplay(root);
-                    return;
-                }
-
-                // MODIFICATION: the eye button intentionally carries BOTH
-                // .kanban-toggle-hidden-btn and .kanban-reset-filter-btn (the original
-                // code had two separate listeners on this same element, so a click always
-                // did both things: toggled hidden-card visibility AND cleared the filter).
-                // Check the more specific toggle-hidden case first and replicate both
-                // effects there, so the plain reset-only branch below doesn't shadow it.
-                const toggleHiddenBtn = e.target.closest(".kanban-toggle-hidden-btn");
-                if (toggleHiddenBtn) {
-                    e.preventDefault();
-                    const board = root.querySelector(".kanban-board");
-                    if (board) {
-                        board.classList.toggle("show-hidden");
-                        if (board.classList.contains("show-hidden")) {
-                            toggleHiddenBtn.innerHTML = eyeOffIcon;
-                            toggleHiddenBtn.title = "Hide hidden cards";
-                        } else {
-                            toggleHiddenBtn.innerHTML = eyeIcon;
-                            toggleHiddenBtn.title = "Show hidden cards";
-                        }
-                    }
-                    const toggleInput = root.querySelector(".kanban-search-input");
-                    if (toggleInput) toggleInput.value = "";
-                    window._kanbanFilterState = "";
-                    updateDisplay(root);
-                    return;
-                }
-
-                const resetBtn = e.target.closest(".kanban-reset-filter-btn");
-                if (resetBtn) {
-                    e.preventDefault();
-                    const input = root.querySelector(".kanban-search-input");
-                    if (input) input.value = "";
-                    window._kanbanFilterState = "";
-                    updateDisplay(root);
-                    return;
-                }
-                // MODIFICATION END
-
-                const editBtn = e.target.closest(".kanban-card-edit");
-                if (editBtn) {
-                    e.stopPropagation();
-                    const card = editBtn.closest(".kanban-card");
-                    let columnOrder = [];
-                    try { columnOrder = JSON.parse(root.dataset.columnOrder || "[]"); } catch(err) {}
-                    try {
-                        const taskData = JSON.parse(card.dataset.taskJson);
-                        taskData._kanbanStatusKey = root.dataset.statusKey;
-                        taskData._kanbanDoneStatus = columnOrder.length > 0 ? columnOrder[columnOrder.length - 1] : "";
-                        taskData._kanbanDefaultStatus = columnOrder.length > 0 ? columnOrder[0] : "";
-                        window.dispatchEvent(new CustomEvent("sb-kanban-edit-task", { detail: taskData }));
-                    } catch(err) { console.error("Failed to parse task data", err); }
-                }
-            });
-
-            document.addEventListener("dragstart", (e) => {
-                if (!e.target.classList || !e.target.classList.contains('kanban-card')) return;
-                draggedCard = e.target;
-                sourceColumn = e.target.closest('.kanban-column');
-                setTimeout(() => { e.target.style.opacity = '0.5'; }, 0);
-            });
-
-            document.addEventListener("dragend", (e) => {
-                if (draggedCard) {
-                    draggedCard.style.opacity = '';
-                    draggedCard = null;
-                    sourceColumn = null;
-                }
-            });
-
-            document.addEventListener("dragover", (e) => {
-                if (getRoot(e.target)) e.preventDefault();
-            });
-
-            document.addEventListener("drop", (e) => {
-                const root = getRoot(e.target);
-                if (!root || !draggedCard) return;
-                e.preventDefault();
-                const column = e.target.closest('.kanban-column');
-                if (!column) return;
-                column.querySelector('.kanban-cards').appendChild(draggedCard.closest('.kanban-card-wrapper'));
-                dispatchMove(root, draggedCard, column);
-            });
-
-            document.addEventListener("touchstart", (e) => {
-                const card = e.target.closest('.kanban-card');
-                if (card && e.touches.length === 1) {
-                    const touch = e.touches[0];
-                    touchStartX = touch.clientX;
-                    touchStartY = touch.clientY;
-                    dragTimer = setTimeout(() => {
-                        isDragging = true;
-                        draggedCard = card;
-                        sourceColumn = card.closest('.kanban-column');
-                        draggedCard.style.opacity = '0.5';
-                    }, 500);
-                }
-            }, { passive: true });
-
-            document.addEventListener("touchmove", (e) => {
-                if (dragTimer) {
-                    const touch = e.touches[0];
-                    const deltaX = Math.abs(touch.clientX - touchStartX);
-                    const deltaY = Math.abs(touch.clientY - touchStartY);
-                    if (deltaX > 10 || deltaY > 10) {
-                        clearTimeout(dragTimer);
-                        dragTimer = null;
-                    }
-                }
-                if (!isDragging || !draggedCard) return;
-                e.preventDefault();
+        document.addEventListener("touchstart", (e) => {
+            const card = e.target.closest ? e.target.closest('.kanban-card') : null;
+            if (card && e.touches.length === 1) {
                 const touch = e.touches[0];
-                const elementOver = document.elementFromPoint(touch.clientX, touch.clientY);
-                const columnOver = elementOver ? elementOver.closest('.kanban-column') : null;
-                if (columnOver) {
-                    const cardsContainer = columnOver.querySelector('.kanban-cards');
-                    cardsContainer.appendChild(draggedCard.closest('.kanban-card-wrapper'));
-                }
-            }, { passive: false });
+                touchStartX = touch.clientX;
+                touchStartY = touch.clientY;
+                dragTimer = setTimeout(() => {
+                    isDragging = true;
+                    draggedCard = card;
+                    sourceColumn = card.closest('.kanban-column');
+                    draggedCard.style.opacity = '0.5';
+                }, 500);
+            }
+        }, { passive: true });
 
-            document.addEventListener("touchend", (e) => {
-                if (dragTimer) {
+        document.addEventListener("touchmove", (e) => {
+            if (dragTimer) {
+                const touch = e.touches[0];
+                const deltaX = Math.abs(touch.clientX - touchStartX);
+                const deltaY = Math.abs(touch.clientY - touchStartY);
+                if (deltaX > 10 || deltaY > 10) {
                     clearTimeout(dragTimer);
                     dragTimer = null;
                 }
-                if (!isDragging || !draggedCard) return;
-                isDragging = false;
-                draggedCard.style.opacity = '';
-                const root = getRoot(draggedCard);
-                const column = draggedCard.closest('.kanban-column');
-                if (root && column) dispatchMove(root, draggedCard, column);
-                draggedCard = null;
-                sourceColumn = null;
-            });
+            }
+            if (!isDragging || !draggedCard) return;
+            e.preventDefault();
+            const touch = e.touches[0];
+            const elementOver = document.elementFromPoint(touch.clientX, touch.clientY);
+            const columnOver = elementOver ? elementOver.closest('.kanban-column') : null;
+            if (columnOver) {
+                const cardsContainer = columnOver.querySelector('.kanban-cards');
+                cardsContainer.appendChild(draggedCard);
+            }
+        }, { passive: false });
 
-            // Persistent, session-wide watcher: initializes ANY kanban board that appears
-            // in the DOM, whenever it appears, for as long as the page is open. This is
-            // what makes the board keep working even when SilverBullet swaps this widget's
-            // DOM without re-invoking this Lua function.
-            const observer = new MutationObserver(() => {
-                document.querySelectorAll(".kanban-board:not([data-kanban-init='1'])").forEach(initBoard);
-            });
-            observer.observe(document.body, { childList: true, subtree: true });
-        }
-
-        // Fast path: try to initialize this specific render's board immediately. If the
-        // DOM isn't mounted yet, the persistent observer installed above will catch it
-        // whenever it does appear — no fixed timeout to run out of, and no dependence on
-        // this exact script instance being the one that succeeds.
-        const root = document.getElementById(boardId);
-        if (root) initBoard(root.querySelector(".kanban-board"));
+        document.addEventListener("touchend", () => {
+            if (dragTimer) {
+                clearTimeout(dragTimer);
+                dragTimer = null;
+            }
+            if (!isDragging || !draggedCard) return;
+            isDragging = false;
+            draggedCard.style.opacity = '';
+            const root = getRoot(draggedCard);
+            const column = draggedCard.closest('.kanban-column');
+            if (root && column) dispatchMove(root, draggedCard, column);
+            draggedCard = null;
+            sourceColumn = null;
+        });
     })();
     ]]
 
-    local scriptEl = js.window.document.createElement("script")
-    scriptEl.innerHTML = jsCode
-    js.window.document.body.appendChild(scriptEl)
+    if not js.window.kanbanEngineInstalled then
+        local scriptEl = js.window.document.createElement("script")
+        scriptEl.innerHTML = jsCode
+        js.window.document.body.appendChild(scriptEl)
+    end
 
     return widget.new {
         display = "block",
