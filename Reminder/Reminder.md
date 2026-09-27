@@ -15,7 +15,7 @@ Track reminders on pages via `reminderDate`/`reminderTime` frontmatter and list 
 * Run the **Reminder** command — the shipped page template creates a new page under `Reminder/<timestamp>` with the reminder frontmatter pre-filled.
 * New reminders default to **today at 00:00**, so they are due immediately. Set a `reminderDate` in the future (format `YYYY-MM-DD`) and `reminderTime` (format `HH:MM`) to schedule them; reminders without a title are listed under their page name.
 * Embed `${get_active_reminders()}` on any page — it renders all **due** reminders (their date/time has passed), ordered by `reminderDate`, with a link to the reminder page.
-* Embed `${ReminderWall()}` for a sticky-note style view of your reminders — see the demo wall below. Reminders whose date/time has not yet come count as snoozed: they are hidden by default and can be revealed, grayed out, via the ⏰ toggle. Each note carries a 💤 button that postpones the reminder to the picked date by updating its `reminderDate` (clearing the picker makes it due again today). A custom query can be passed to show a different selection.
+* Embed `${ReminderWall()}` for a sticky-note style view of your reminders — see the demo wall below. Reminders whose date/time has not yet come count as snoozed: they are hidden by default and can be revealed, grayed out, via the ⏰ toggle. Each note carries a 💤 button that postpones the reminder to the picked date by updating its `reminderDate` (clearing the picker makes it due again today). Notes are colored by how overdue the reminder is: light yellow when it just popped up, continuously fading to dark red when it is more than a week overdue. A custom query can be passed to show a different selection.
 
 > **note** Reminder pages carry the `reminder` tag. Any page tagged `reminder` with valid `reminderDate`/`reminderTime` fields counts — the template is just a convenience; pages with missing or unparseable fields are ignored.
 > Updating the library re-pulls the library page and the shipped template, overwriting local changes to them.
@@ -109,15 +109,14 @@ ${ReminderWall()}
   box-sizing: border-box;
   padding: 12px 12px 16px;
   border-radius: 2px;
-  background: linear-gradient(160deg, oklch(0.92 0.11 95), oklch(0.83 0.13 75));
+  /* Fallback only — the Lua code sets the per-note background inline,
+     colored by overdue age: light yellow when the reminder just popped up,
+     fading to dark red once it is more than a week overdue */
+  background: linear-gradient(160deg, oklch(0.93 0.12 100), oklch(0.85 0.13 85));
   color: oklch(0.25 0.05 60);
   box-shadow: 2px 4px 10px rgba(0 0 0 / 0.3);
   transform: rotate(-1.2deg);
   transition: transform 0.15s ease;
-}
-
-html[data-theme='dark'] .rem-note {
-  background: linear-gradient(160deg, oklch(0.8 0.12 90), oklch(0.68 0.13 70));
 }
 
 .rem-note:nth-child(even) { transform: rotate(1.3deg); }
@@ -285,15 +284,13 @@ local function setFrontmatterValue(pageName, key, value)
     end, 200)
 end
 
--- ------------- Snooze check -------------
--- On the wall a reminder counts as "snoozed" while its reminderDate/
--- reminderTime has not yet come; once due it shows up normally.
--- (The snoozeDate field is deliberately not used here — postponing a
--- reminder means moving its reminderDate, see the 💤 button.)
-local function isSnoozed(p)
+-- ------------- Due time helpers -------------
+-- Returns a reminder page's due timestamp, or nil when its fields are
+-- missing or unparseable
+local function dueTimeOf(p)
     local rd = p.reminderDate
     local rt = p.reminderTime
-    if rd == nil or rt == nil then return false end
+    if rd == nil or rt == nil then return nil end
     rd = tostring(rd)
     rt = tostring(rt)
     local y = tonumber(rd:sub(1, 4))
@@ -301,9 +298,43 @@ local function isSnoozed(p)
     local d = tonumber(rd:sub(9, 10))
     local h = tonumber(rt:sub(1, 2))
     local mi = tonumber(rt:sub(4, 5))
-    if y == nil or mo == nil or d == nil or h == nil or mi == nil then return false end
-    local dueTime = os.time({ year = y, month = mo, day = d, hour = h, min = mi })
-    return dueTime >= os.time()
+    if y == nil or mo == nil or d == nil or h == nil or mi == nil then return nil end
+    return os.time({ year = y, month = mo, day = d, hour = h, min = mi })
+end
+
+-- On the wall a reminder counts as "snoozed" while its due time has not
+-- yet come; once due it shows up normally. (The snoozeDate field is
+-- deliberately not used here — postponing a reminder means moving its
+-- reminderDate, see the 💤 button.)
+local function isSnoozed(p)
+    local due = dueTimeOf(p)
+    if due == nil then return false end
+    return due >= os.time()
+end
+
+-- Sticky color by overdue age: light yellow when the reminder just popped
+-- up, continuously fading to dark red once it is more than a week overdue
+local function overdueColorStyle(p)
+    local ageT = 0
+    local due = dueTimeOf(p)
+    if due ~= nil then
+        local age = os.time() - due
+        if age > 0 then
+            ageT = age / (7 * 24 * 60 * 60) -- fraction of a week overdue
+            if ageT > 1 then ageT = 1 end
+        end
+    end
+    -- Interpolate the gradient stops (top-left, bottom-right) in OKLCH:
+    -- light yellow (hue ~100) towards dark red (hue ~30)
+    local l1 = 0.93 + (0.68 - 0.93) * ageT
+    local c1 = 0.12 + (0.17 - 0.12) * ageT
+    local h1 = 100 + (35 - 100) * ageT
+    local l2 = 0.85 + (0.58 - 0.85) * ageT
+    local c2 = 0.13 + (0.17 - 0.13) * ageT
+    local h2 = 85 + (27 - 85) * ageT
+    local stop1 = string.format("oklch(%.3f %.3f %.1f)", l1, c1, h1)
+    local stop2 = string.format("oklch(%.3f %.3f %.1f)", l2, c2, h2)
+    return ' style="background: linear-gradient(160deg, ' .. stop1 .. ', ' .. stop2 .. ')"'
 end
 
 -- ------------- Event Listeners -------------
@@ -380,7 +411,7 @@ function ReminderWall(reminderQuery)
             noteAttrs = noteAttrs .. ' data-snooze-date="' .. tostring(rd) .. '"'
         end
 
-        html = html .. '<div class="rem-note"' .. noteAttrs .. '>'
+        html = html .. '<div class="rem-note"' .. noteAttrs .. overdueColorStyle(p) .. '>'
         html = html .. '<a class="rem-note-title" draggable="false" href="/' .. pageNameEsc .. '" data-ref="/' .. pageNameEsc .. '" title="' .. pageNameEsc .. '">' .. displayNameEsc .. '</a>'
         html = html .. '<div class="rem-note-due">' .. tostring(p.reminderDate) .. ' ' .. tostring(p.reminderTime) .. '</div>'
         html = html .. '<div class="rem-snooze-btn" title="Postpone this reminder until...">💤</div>'
