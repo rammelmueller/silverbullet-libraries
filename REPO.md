@@ -14,6 +14,6 @@ description: "This widget creates a customizable Kanban board to visualize and m
 name: "⏰ Reminder"
 uri: https://github.com/rammelmueller/silverbullet-libraries/blob/main/Reminder/Reminder.md
 website: https://github.com/rammelmueller/silverbullet-libraries/blob/main/Reminder/Reminder.md
-description: "Track reminders via reminderDate/reminderTime frontmatter — shows due reminders on any page and ships a Reminder page template."
+description: "Track reminders via reminderDate/reminderTime frontmatter — shows due reminders on any page, ships a Reminder page template and a sticky-note wall widget."
 ---
 ```
