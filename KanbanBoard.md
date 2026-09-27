@@ -40,6 +40,7 @@ You can define the columns and their corresponding status values in the widget's
 - **Tag filter** — restrict the board to pages carrying all of the given frontmatter tags (`Tags` option)
 - **Customisable columns** — define your own workflow stages with labels, emoji, and optional accent colours per column
 - **Custom card fields** — choose which frontmatter attributes are shown on each card (`Fields`)
+- **Short card names** — cards display only the file name (the part after the last `/` of the page name, e.g. `task/buy-milk` shows as `buy-milk`); links still open the full page
 - **HideKeys** — display an attribute value without showing its label (handy for IDs or long text)
 - **Mobile-friendly** — columns hold their minimum width and the board scrolls horizontally on narrow screens instead of squishing
 
@@ -421,14 +422,20 @@ function KanbanBoard(pageQuery, options)
 
         for _, p in ipairs(pages) do
             local pageName = tostring(p.name or "")
-            pageName = pageName:gsub('"', '&quot;')
-            pageName = pageName:gsub('<', '&lt;')
-            pageName = pageName:gsub('>', '&gt;')
+            -- On the card show only the file name (part after the last '/'),
+            -- e.g. task/buy-milk is displayed as buy-milk
+            local displayName = pageName:match("([^/]+)$") or pageName
+            local pageNameEsc = pageName:gsub('"', '&quot;')
+            pageNameEsc = pageNameEsc:gsub('<', '&lt;')
+            pageNameEsc = pageNameEsc:gsub('>', '&gt;')
+            local displayNameEsc = displayName:gsub('"', '&quot;')
+            displayNameEsc = displayNameEsc:gsub('<', '&lt;')
+            displayNameEsc = displayNameEsc:gsub('>', '&gt;')
 
-            html = html .. '<div class="kanban-card" draggable="true" data-page="' .. pageName .. '">'
+            html = html .. '<div class="kanban-card" draggable="true" data-page="' .. pageNameEsc .. '">'
 
-            -- Clickable Title
-            html = html .. '<a class="kanban-card-name" draggable="false" href="/' .. pageName .. '" data-ref="/' .. pageName .. '" title="' .. pageName .. '">' .. pageName .. '</a>'
+            -- Clickable Title (link and tooltip keep the full page name)
+            html = html .. '<a class="kanban-card-name" draggable="false" href="/' .. pageNameEsc .. '" data-ref="/' .. pageNameEsc .. '" title="' .. pageNameEsc .. '">' .. displayNameEsc .. '</a>'
 
             -- Custom Fields
             if #fields > 0 then
