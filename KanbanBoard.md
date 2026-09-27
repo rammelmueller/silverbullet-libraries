@@ -16,9 +16,8 @@ ${KanbanBoard(
     {"Column", "status"},
     {"Columns", {
       {"open", "📥 To Do","purple"},
-      {"waiting", "⏳ In Progress","blue"},
-      {"in progress", "👀 Needs Review","orange"},
-      {"done", "✅ Done","green"}
+      {"waiting", "⏳ Waiting","orange"},
+      {"in progress", "🏃 In Progress", "blue"}
     }},
     {"Tags", {"personal"}}
   }
