@@ -15,7 +15,7 @@ Track reminders on pages via `reminderDate`/`reminderTime` frontmatter and list 
 * Run the **Reminder** command — the shipped page template creates a new page under `Reminder/<timestamp>` with the reminder frontmatter pre-filled.
 * New reminders default to **today at 00:00**, so they are due immediately. Set a `reminderDate` in the future (format `YYYY-MM-DD`) and `reminderTime` (format `HH:MM`) to schedule them; reminders without a title are listed under their page name.
 * Embed `${get_active_reminders()}` on any page — it renders all **due** reminders (their date/time has passed), ordered by `reminderDate`, with a link to the reminder page.
-* Embed `${ReminderWall()}` for a sticky-note style view of the same due reminders — see the demo wall below. Each note carries a 💤 button that snoozes the reminder until a picked date (clearing the picker reactivates it); snoozed notes disappear from the wall and can be revealed, grayed out, via the ⏰ toggle. A custom query can be passed to show a different selection.
+* Embed `${ReminderWall()}` for a sticky-note style view of your reminders — see the demo wall below. Reminders whose date/time has not yet come count as snoozed: they are hidden by default and can be revealed, grayed out, via the ⏰ toggle. Each note carries a 💤 button that postpones the reminder to the picked date by updating its `reminderDate` (clearing the picker makes it due again today). A custom query can be passed to show a different selection.
 
 > **note** Reminder pages carry the `reminder` tag. Any page tagged `reminder` with valid `reminderDate`/`reminderTime` fields counts — the template is just a convenience; pages with missing or unparseable fields are ignored.
 > Updating the library re-pulls the library page and the shipped template, overwriting local changes to them.
@@ -286,26 +286,37 @@ local function setFrontmatterValue(pageName, key, value)
 end
 
 -- ------------- Snooze check -------------
--- A reminder page is snoozed while its snoozeDate (YYYY-MM-DD) lies in the
--- future; a missing, empty, "none" or unparsable value means it is active.
+-- On the wall a reminder counts as "snoozed" while its reminderDate/
+-- reminderTime has not yet come; once due it shows up normally.
+-- (The snoozeDate field is deliberately not used here — postponing a
+-- reminder means moving its reminderDate, see the 💤 button.)
 local function isSnoozed(p)
-    local sd = p.snoozeDate
-    if sd == nil then return false end
-    sd = tostring(sd)
-    if sd == "" or sd:lower() == "none" then return false end
-    local y = tonumber(sd:sub(1, 4))
-    local m = tonumber(sd:sub(6, 7))
-    local d = tonumber(sd:sub(9, 10))
-    if y == nil or m == nil or d == nil then return false end
-    local snoozeTime = os.time({ year = y, month = m, day = d, hour = 0, min = 0 })
-    return snoozeTime >= os.time()
+    local rd = p.reminderDate
+    local rt = p.reminderTime
+    if rd == nil or rt == nil then return false end
+    rd = tostring(rd)
+    rt = tostring(rt)
+    local y = tonumber(rd:sub(1, 4))
+    local mo = tonumber(rd:sub(6, 7))
+    local d = tonumber(rd:sub(9, 10))
+    local h = tonumber(rt:sub(1, 2))
+    local mi = tonumber(rt:sub(4, 5))
+    if y == nil or mo == nil or d == nil or h == nil or mi == nil then return false end
+    local dueTime = os.time({ year = y, month = mo, day = d, hour = h, min = mi })
+    return dueTime >= os.time()
 end
 
 -- ------------- Event Listeners -------------
 if not js.window.reminderWallListenersAdded then
     js.window.addEventListener("sb-reminder-snooze-update", function(e)
         if e.detail and e.detail.action == "snooze" then
-            setFrontmatterValue(e.detail.page, "snoozeDate", e.detail.value)
+            local value = tostring(e.detail.value or "")
+            if value == "" or value:lower() == "none" then
+                -- Clearing the picker makes the reminder due again today
+                value = os.date("%Y-%m-%d")
+            end
+            -- Snoozing a reminder means postponing its reminderDate
+            setFrontmatterValue(e.detail.page, "reminderDate", value)
         end
     end)
     js.window.reminderWallListenersAdded = true
@@ -313,7 +324,9 @@ end
 
 -- ------------- Reminder Wall Widget -------------
 function ReminderWall(reminderQuery)
-    -- Default: all due reminders, ordered by reminderDate
+    -- Default: all reminders with valid date/time fields, ordered by
+    -- reminderDate. Due ones (date/time passed) show up normally; ones whose
+    -- date/time has not yet come count as snoozed (hidden, ⏰ reveals them).
     if reminderQuery == nil then
         reminderQuery = query[[
             from index.tag "page"
@@ -325,14 +338,6 @@ function ReminderWall(reminderQuery)
             and tonumber(reminderDate:sub(9,10)) ~= nil
             and tonumber(reminderTime:sub(1,2)) ~= nil
             and tonumber(reminderTime:sub(4,5)) ~= nil
-            and
-                  os.time({
-                    year = tonumber(reminderDate:sub(1,4)), 
-                    month = tonumber(reminderDate:sub(6,7)), 
-                    day = tonumber(reminderDate:sub(9,10)), 
-                    hour = tonumber(reminderTime:sub(1,2)), 
-                    min = tonumber(reminderTime:sub(4,5))
-                  }) < os.time()
             order by reminderDate
         ]]
     end
@@ -364,20 +369,21 @@ function ReminderWall(reminderQuery)
         displayNameEsc = displayNameEsc:gsub('<', '&lt;')
         displayNameEsc = displayNameEsc:gsub('>', '&gt;')
 
-        -- Note attributes: write target, snooze state and current snooze date
+        -- Note attributes: write target, pending state and current reminder
+        -- date (pre-fills the snooze picker)
         local noteAttrs = ' data-page="' .. pageNameEsc .. '"'
         if isSnoozed(p) then
             noteAttrs = noteAttrs .. ' data-snoozed="true"'
         end
-        local sd = p.snoozeDate
-        if sd ~= nil and tostring(sd):find("^%d%d%d%d%-%d%d%-%d%d") then
-            noteAttrs = noteAttrs .. ' data-snooze-date="' .. tostring(sd) .. '"'
+        local rd = p.reminderDate
+        if rd ~= nil and tostring(rd):find("^%d%d%d%d%-%d%d%-%d%d") then
+            noteAttrs = noteAttrs .. ' data-snooze-date="' .. tostring(rd) .. '"'
         end
 
         html = html .. '<div class="rem-note"' .. noteAttrs .. '>'
         html = html .. '<a class="rem-note-title" draggable="false" href="/' .. pageNameEsc .. '" data-ref="/' .. pageNameEsc .. '" title="' .. pageNameEsc .. '">' .. displayNameEsc .. '</a>'
         html = html .. '<div class="rem-note-due">' .. tostring(p.reminderDate) .. ' ' .. tostring(p.reminderTime) .. '</div>'
-        html = html .. '<div class="rem-snooze-btn" title="Snooze this reminder until...">💤</div>'
+        html = html .. '<div class="rem-snooze-btn" title="Postpone this reminder until...">💤</div>'
         html = html .. '</div>'
     end
 
@@ -417,9 +423,9 @@ function ReminderWall(reminderQuery)
         });
 
         // Per-note snooze button: opens the browser's native date picker
-        // (pre-filled with the reminder's current snoozeDate) and dispatches
+        // (pre-filled with the reminder's current reminderDate) and dispatches
         // an event that the Lua side persists to the page's frontmatter.
-        // Clearing the picker writes "none" (reminder active again).
+        // Clearing the picker makes the reminder due again today.
         document.addEventListener("click", (e) => {
             const snoozeBtn = e.target.closest ? e.target.closest('.rem-snooze-btn') : null;
             if (!snoozeBtn) return;
