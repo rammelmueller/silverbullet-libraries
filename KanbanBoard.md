@@ -50,7 +50,7 @@ You can define the columns and their corresponding status values in the widget's
 
 - Tags for the `Tags` filter must live in **frontmatter** (`tags: kanban, project`); hashtags in the page body are not considered
 - Manual frontmatter edits to a page require a widget refresh to appear on the board
-- Status values are matched case-insensitively; pages with an unknown or missing status appear in the first column
+- Status values are matched case-insensitively; pages without a `status` start in the first column, while pages with a status that matches no configured column (e.g. `status: done` on a board without a done column) are not shown at all
 - Status values are written as plain YAML scalars (`status: done`) and are only quoted when a plain scalar would be ambiguous
 
 ## Setup and Configuration
@@ -468,15 +468,21 @@ function KanbanBoard(pageQuery, options)
 
     for p in pageQuery do
         if hasRequiredTags(p) then
-            local raw_status = p[statusKey] or columnOrder[1]
-            local status = tostring(raw_status):gsub("^%s*(.-)%s*$", "%1")
-                  status = status:lower()
+            local raw_status = p[statusKey]
+            -- A missing or empty status means the page has not been started
+            -- yet: it starts in the first column.
+            local status
+            if raw_status == nil or raw_status == "" then
+                status = columnOrder[1]
+            else
+                status = tostring(raw_status):gsub("^%s*(.-)%s*$", "%1")
+                status = status:lower()
+            end
 
+            -- A status that matches no configured column (e.g. "done" on a
+            -- board without a done column) does not show up on the board.
             if pagesByStatus[status] then
                 table.insert(pagesByStatus[status], p)
-            else
-                -- If it doesn't have a status or is unknown, move to first column
-                table.insert(pagesByStatus[columnOrder[1]], p)
             end
         end
     end
