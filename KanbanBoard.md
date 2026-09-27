@@ -1,5 +1,5 @@
 ---
-name: "Library/Mr-xRed/KanbanBoard"
+name: "Library/rammelmueller/KanbanBoard"
 tags: meta/library
 pageDecoration.prefix: "✅ "
 ---
