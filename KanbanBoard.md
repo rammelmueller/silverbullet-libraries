@@ -237,7 +237,8 @@ taskID: P-17
   min-height: 100px;
   padding: 16px 8px;
   box-sizing: border-box;
-  color: var(--text-muted);
+  /* ink just a bit darker than the column background, in both themes */
+  color: oklch(from var(--modal-help-background-color) calc(l - 0.1) c h);
   font-style: italic;
   text-align: center;
 }
@@ -254,15 +255,12 @@ taskID: P-17
   width: 110px;
   height: auto;
   margin-bottom: 8px;
-  /* pencil-style line art: strokes use currentColor at exactly the same
-     muted color and opacity as the subtitle below */
-  color: var(--text-muted);
-  opacity: 0.75;
+  /* pencil-style line art: strokes use currentColor, inheriting the
+     placeholder's light ink color */
 }
 
 .kanban-col-empty-sub {
   font-size: 0.75em;
-  opacity: 0.75;
 }
 
 

@@ -109,7 +109,8 @@ ${ReminderWall()}
   box-sizing: border-box;
   border-radius: 18px;
   background: oklch(from var(--modal-help-background-color) l c h / 0.4);
-  color: var(--text-muted);
+  /* ink just a bit darker than the panel background, in both themes */
+  color: oklch(from var(--modal-help-background-color) calc(l - 0.1) c h);
   font-style: italic;
   text-align: center;
 }
@@ -118,15 +119,12 @@ ${ReminderWall()}
   width: 150px;
   height: auto;
   margin-bottom: 8px;
-  /* pencil-style line art: strokes use currentColor, so the drawing takes
-     the same muted color as the subtext below */
-  color: var(--text-muted);
-  opacity: 0.75;
+  /* pencil-style line art: strokes use currentColor, inheriting the
+     placeholder's light ink color */
 }
 
 .rem-empty-sub {
   font-size: 0.8em;
-  opacity: 0.75;
 }
 
 /* When the toggle reveals hidden (snoozed) notes, the placeholder retracts;
@@ -481,9 +479,9 @@ function ReminderWall(reminderQuery)
         -- Pencil-style sleeping Snorlax: line art only, inheriting the
         -- muted text color of the container
         html = html .. '<svg class="rem-empty-art" viewBox="45 -54 918 434" xmlns="http://www.w3.org/2000/svg" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round">'
-        html = html .. '<text x="514" y="36" font-size="55" fill="currentColor" stroke="none" opacity="0.5">Z</text>'
-        html = html .. '<text x="570" y="4" font-size="40" fill="currentColor" stroke="none" opacity="0.38">z</text>'
-        html = html .. '<text x="608" y="-26" font-size="27" fill="currentColor" stroke="none" opacity="0.26">z</text>'
+        html = html .. '<text x="514" y="36" font-size="55" fill="currentColor" stroke="none" opacity="1">Z</text>'
+        html = html .. '<text x="570" y="4" font-size="40" fill="currentColor" stroke="none" opacity="0.85">z</text>'
+        html = html .. '<text x="608" y="-26" font-size="27" fill="currentColor" stroke="none" opacity="0.7">z</text>'
         html = html .. '<path d="M442.606,302.737c2.14-0.958,4.151-2.231,5.902-3.792c1.764-1.565,3.273-3.421,4.508-5.427c1.971-3.205,3.306-6.791,4.215-10.432 c1.58-6.403,1.864-13.1,1.335-19.657c-0.529-6.321-1.788-12.637-3.981-18.597c-1.443-3.91-3.359-7.681-5.513-11.245 c-2.032-3.388-4.563-7.02-6.847-10.257c-4.82-6.823-10.12-13.641-15.805-19.766c-7.686-8.322-16.409-15.897-25.527-22.612 c-4.675-3.423-9.618-6.729-14.673-9.566c-3.444-1.908-7.071-3.724-10.814-4.968" stroke-width="1.7" vector-effect="non-scaling-stroke"/>'
         html = html .. '<path d="M414.4,268.434c-0.542-14.242-2.095-28.648-5.644-42.471c-2.225-8.7-5.217-17.287-9.095-25.392 c-2.794-5.845-6.131-11.511-9.843-16.819c-3.682-5.284-7.888-10.411-12.288-15.118c-2.99-3.152-6.152-6.326-9.501-9.089 c-4.287-3.576-9.075-6.587-14.012-9.179c-5.078-2.667-10.624-5.181-15.943-7.331c-10.446-4.189-21.381-7.537-32.436-9.655 c-12.339-2.359-25.146-3.24-37.699-3.342c-7.883-0.041-16.231,0.256-24.09,0.856c-7.673,0.599-15.588,1.566-23.116,3.163 c-11.541,2.394-22.826,6.367-33.615,11.085c-12.527,5.507-24.949,12.124-36.431,19.572c-10.325,6.717-20.157,14.439-28.538,23.495 c-22.086,23.636-30.761,54.197-32.32,85.913" stroke-width="1.7" vector-effect="non-scaling-stroke"/>'
         html = html .. '<path d="M140.3,366.549c4.666,.761,9.575,1.109,14.302,1.277c7.967,.329,183.719,.177,190.946,.118c7.168,-.133,14.441,-.766,21.401,-2.55" stroke-width="1.7" vector-effect="non-scaling-stroke"/>'
