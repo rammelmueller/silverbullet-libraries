@@ -16,4 +16,9 @@ uri: https://github.com/rammelmueller/silverbullet-libraries/blob/main/Reminder/
 website: https://github.com/rammelmueller/silverbullet-libraries/blob/main/Reminder/Reminder.md
 description: "Track reminders via reminderDate/reminderTime frontmatter — shows due reminders on any page, ships a Reminder page template and a sticky-note wall widget."
 ---
+name: "📊 Dashboard Elements"
+uri: github:rammelmueller/silverbullet-libraries/DashboardElements.md
+website: https://github.com/rammelmueller/silverbullet-libraries/blob/main/DashboardElements.md
+description: "Pinterest-style dashboard tiles: masonry layout of markdown text tiles and one-click shortcut buttons to pages and commands."
+---
 ```
