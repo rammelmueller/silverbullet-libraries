@@ -15,7 +15,7 @@ Track reminders on pages via `reminderDate`/`reminderTime` frontmatter and list 
 * Run the **Reminder** command — the shipped page template creates a new page under `Reminder/<timestamp>` with the reminder frontmatter pre-filled.
 * New reminders default to **today at 00:00**, so they are due immediately. Set a `reminderDate` in the future (format `YYYY-MM-DD`) and `reminderTime` (format `HH:MM`) to schedule them; reminders without a title are listed under their page name.
 * Embed `${get_active_reminders()}` on any page — it renders all **due** reminders (their date/time has passed), ordered by `reminderDate`, with a link to the reminder page.
-* Embed `${ReminderWall()}` for a sticky-note style view of your reminders — see the demo wall below. Reminders whose date/time has not yet come count as snoozed: they are hidden by default and can be revealed, grayed out, via the ⏰ toggle. Each note carries a 💤 button that postpones the reminder to the picked date by updating its `reminderDate` (clearing the picker makes it due again today). Notes are colored by how overdue the reminder is: light yellow when it just popped up, continuously fading to dark red when it is more than a week overdue. A custom query can be passed to show a different selection.
+* Embed `${ReminderWall()}` for a sticky-note style view of your reminders — see the demo wall below. Reminders whose date/time has not yet come count as snoozed: they are hidden by default and can be revealed, grayed out, via the ⏰ toggle. Each note carries a 💤 button that postpones the reminder to the picked date by updating its `reminderDate` (clearing the picker makes it due again today). Notes are colored by how overdue the reminder is: light yellow when it just popped up, continuously fading to dark red when it is more than a week overdue. Notes grow to fill the width of the box row by row; pass a second options table with `{"MaxPerLine", N}` to cap how many stickies share a line (default 4). A custom query can be passed as the first argument to show a different selection.
 
 > **note** Reminder pages carry the `reminder` tag. Any page tagged `reminder` with valid `reminderDate`/`reminderTime` fields counts — the template is just a convenience; pages with missing or unparseable fields are ignored.
 > Updating the library re-pulls the library page and the shipped template, overwriting local changes to them.
@@ -135,7 +135,8 @@ ${ReminderWall()}
 
 .rem-note {
   position: relative;
-  width: 200px;
+  flex: 1 1 200px;
+  max-width: var(--rem-note-max, calc((100% - 42px) / 4));
   min-height: 90px;
   box-sizing: border-box;
   padding: 12px 12px 16px;
@@ -397,7 +398,18 @@ if not js.window.reminderWallListenersAdded then
 end
 
 -- ------------- Reminder Wall Widget -------------
-function ReminderWall(reminderQuery)
+function ReminderWall(reminderQuery, options)
+    -- {"MaxPerLine", N}: cap on stickies per line (default 4). Notes grow to
+    -- fill each row; the cap bounds their width so at most N share a line.
+    local maxPerLine = 4
+    for _, opt in ipairs(options or {}) do
+        if opt[1] == "MaxPerLine" then
+            maxPerLine = math.max(1, math.floor(tonumber(opt[2]) or 4))
+        end
+    end
+    -- max-width that leaves room for N-1 gaps between N notes
+    local noteMaxStyle = "calc((100% - " .. tostring((maxPerLine - 1) * 14) .. "px) / " .. tostring(maxPerLine) .. ")"
+
     -- Default: all reminders with valid date/time fields, ordered by
     -- reminderDate. Due ones (date/time passed) show up normally; ones whose
     -- date/time has not yet come count as snoozed (hidden, ⏰ reveals them).
@@ -429,7 +441,8 @@ function ReminderWall(reminderQuery)
 
     local html = '<div data-reminder-root="true">'
     html = html .. '<div class="rem-controls"><button class="' .. snoozeBtnClass .. '" title="' .. snoozeBtnTitle .. '">⏰</button></div>'
-    html = html .. '<div class="rem-wall' .. (showSnoozed and ' show-snoozed' or '') .. '">'
+    html = html .. '<div class="rem-wall' .. (showSnoozed and ' show-snoozed' or '') ..
+        '" style="--rem-note-max: ' .. noteMaxStyle .. '">'
 
     local noteCount = 0
     local visibleCount = 0
