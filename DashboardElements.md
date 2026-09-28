@@ -12,25 +12,12 @@ Pinterest-style dashboard tiles: a masonry wall of same-width, variable-height t
 ${Dashboard{
   {"Columns", 3},
   {"Tiles", {
-    { {"Title", "📌 Quick Links"}, {"Content", [==[
-Shortcuts to the places that matter:
-* [[Library/rammelmueller/KanbanBoard|Kanban Board]]
-* [[Library/rammelmueller/Reminder|Reminder Library]]
-]==]} },
-    { {"Title", "Markdown tiles"}, {"Content", [==[
-Tiles render **any markdown** — [links](https://silverbullet.md), lists:
-
-* one
-* two
-
-`code blocks` too.
-]==]}, {"Color", "oklch(0.85 0.08 95)"} },
-    { {"Label", "⏰ Reminder"}, {"Page", "Library/rammelmueller/Reminder"} },
-    { {"Label", "📄 New page from template"}, {"Command", "Page: From Template"} },
-    { {"Label", "🏠 Space index"}, {"Page", "index"} },
-    { {"Title", "Colors"}, {"Content", [==[
-Use the **Color** and **TextColor** pairs with any CSS color — the yellow tile above uses `oklch(0.85 0.08 95)`.
-]==]} },
+    { {"Title", "One"}, {"Content", "First tile"} },
+    { {"Title", "Two"}, {"Content", "Second tile"} },
+    { {"Title", "Three"}, {"Content", "Third tile"} },
+    { {"Label", "Kanban Board"}, {"Page", "Library/rammelmueller/KanbanBoard"} },
+    { {"Label", "New page from template"}, {"Command", "Page: From Template"} },
+    { {"Title", "Four"}, {"Content", "Fourth tile"}, {"Color", "oklch(0.85 0.08 95)"} }
   }}
 }}
 
@@ -55,6 +42,7 @@ The widget takes a list of tiles and renders them into a masonry layout: tiles f
 - Greedy shortest-column placement approximates row-major order — the exact grid position of a tile can differ from strict left-to-right/top-to-bottom placement when tile heights vary
 - The layout engine is installed once per browser session; **engine updates require a page reload** to take effect
 - Tile content is static at render time — there is no interactive filtering or editing of tiles
+- Multi-line tile content is not accepted inside the `${...}` directive — keep `Content` (and all other values) on a single line
 
 ## Setup and Configuration
 
@@ -63,7 +51,7 @@ The widget takes a list of tiles and renders them into a masonry layout: tiles f
 *   **`{"Columns", N}`**: (Optional) Number of columns on wide screens. Defaults to `3`. Below ~900px the board falls back to 2 columns (capped at the configured count), below ~600px to a single column.
 *   **`{"Tiles", { ... }}`**: The tile list. Each tile is itself a pair list made of the following pairs:
     *   **`{"Title", "..."}`**: (Optional) Header line for text tiles.
-    *   **`{"Content", [==[ ... ]==]}`**: Markdown content — makes the tile a text tile.
+    *   **`{"Content", "..."}`**: Markdown content — makes the tile a text tile. Keep it on a single line.
     *   **`{"Color", "<css color>"}`**: (Optional) Background color — any CSS color value; defaults to the neutral panel background.
     *   **`{"TextColor", "<css color>"}`**: (Optional) Text color override, useful on dark tile colors.
     *   **`{"Label", "..."}`**: Button label — makes the tile a button tile.
@@ -72,7 +60,7 @@ The widget takes a list of tiles and renders them into a masonry layout: tiles f
 
 A tile with a `Page` or `Command` pair is a button tile; a tile with a `Content` pair is a text tile.
 
-> **note** Write markdown content in `[==[ ... ]==]` long strings: plain `[[ ]]` strings would be terminated by `[[WikiLinks]]` inside the content.
+> **note** All tile values must stay on a single line inside the `${...}` directive — multi-line strings are not accepted there.
 
 ### Widget example
 
@@ -80,13 +68,9 @@ A tile with a `Page` or `Command` pair is a button tile; a tile with a `Content`
 ${Dashboard{
   {"Columns", 3},
   {"Tiles", {
-    { {"Title", "Work"}, {"Content", [==[
-Everything work-related:
-* [[work/inbox|Inbox]]
-* [[work/meetings|Meetings]]
-]==]}, {"Color", "oklch(0.85 0.08 95)"} },
-    { {"Label", "⏰ Open Reminders"}, {"Page", "Library/rammelmueller/Reminder"} },
-    { {"Label", "🔍 Search space"}, {"Command", "Search: Space"}, {"Color", "oklch(0.8 0.12 250)"}, {"TextColor", "white"} },
+    { {"Title", "Work"}, {"Content", "Everything work-related"}, {"Color", "oklch(0.85 0.08 95)"} },
+    { {"Label", "Open Reminders"}, {"Page", "Library/rammelmueller/Reminder"} },
+    { {"Label", "Search space"}, {"Command", "Search: Space"}, {"Color", "oklch(0.8 0.12 250)"}, {"TextColor", "white"} },
   }}
 }}
 ```
