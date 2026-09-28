@@ -2,7 +2,8 @@
 tags:
 - dashboard-tile
 - dashboard-demo
-title: 🥅 Current near-term goals
+title: 🥅 Example goals
 order: 20
 ---
-- Talk for CNCF meetup -> [[talks/the-why-and-how-of-self-hosted-ai]]
+- Draft the outline for [[some/talk]]
+- Prepare the demo for [[a-meeting]]

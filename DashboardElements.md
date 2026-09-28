@@ -68,11 +68,12 @@ Every tile is a page tagged `dashboard-tile` (the universal marker) plus the das
 tags:
 - dashboard-tile
 - dashboard-main
-title: 🥅 Current near-term goals
+title: 🥅 Example goals
 order: 20
 color: oklch(0.85 0.08 95)
 ---
-- Talk for CNCF meetup -> [[talks/the-why-and-how-of-self-hosted-ai]]
+- Draft the outline for [[some/talk]]
+- Prepare the demo for [[a-meeting]]
 ```
 
 Frontmatter fields:
