@@ -60,7 +60,7 @@ The widget takes a list of tiles and renders them into a masonry layout: tiles f
 
 A tile with a `Page` or `Command` pair is a button tile; a tile with a `Content` pair is a text tile.
 
-> **note** All tile values must stay on a single line inside the `${...}` directive — multi-line strings are not accepted there.
+> **note** All tile values must stay on a single line inside the `${...}` directive — multi-line strings are not accepted there. Use straight ASCII quotes (`"`) only: typographic quotes (`“ ”`, produced by some keyboards and autocorrect features) are invalid Lua and break the widget with `unexpected symbol near` errors.
 
 ### Widget example
 
