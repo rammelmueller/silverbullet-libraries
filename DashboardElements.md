@@ -198,6 +198,36 @@ Everything work-related:
 
 ## Lua Implementation
 ```space-lua
+-- ------------- Escape helper for plain-text values -------------
+local function escapeHtml(s)
+    local out = tostring(s or "")
+    out = out:gsub('"', '&quot;')
+    out = out:gsub('<', '&lt;')
+    out = out:gsub('>', '&gt;')
+    return out
+end
+
+-- Global action handler, redefined on every library evaluation so library
+-- updates apply to live sessions without a page reload. The listener
+-- registered below is a thin, stable shim that dispatches to this global.
+function dashboardHandleAction(detail)
+    if detail and detail.target ~= nil then
+        if detail.action == "page" then
+            editor.navigate(tostring(detail.target))
+        elseif detail.action == "command" then
+            editor.invokeCommand(tostring(detail.target))
+        end
+    end
+end
+
+-- ------------- Event Listeners -------------
+if not js.window.dashboardActionListenerAdded then
+    js.window.addEventListener("sb-dash-action", function(e)
+        dashboardHandleAction(e.detail)
+    end)
+    js.window.dashboardActionListenerAdded = true
+end
+
 -- ------------- Main Dashboard Function -------------
 function Dashboard(options)
     local columns = 3
@@ -222,10 +252,10 @@ function Dashboard(options)
         return style
     end
 
-    local board = dom.div {
-        class = "dash-board dash-pending",
-        ["data-columns"] = tostring(columns),
-    }
+    -- Everything is rendered as a plain HTML string (the same battle-tested
+    -- approach as the Kanban board); markdown content is rendered natively
+    -- through SilverBullet's markdown pipeline.
+    local html = '<div class="dash-board dash-pending" data-columns="' .. tostring(columns) .. '">'
 
     local tileCount = 0
     for _, spec in ipairs(tileSpecs) do
@@ -235,47 +265,49 @@ function Dashboard(options)
             tile[pair[1]] = pair[2]
         end
 
-        local tileEl = nil
+        local tileHtml = nil
         if tile.Page ~= nil or tile.Command ~= nil then
-            -- Button tile: the whole tile is one action
-            local onclick
+            -- Button tile: rendered with data attributes; the click is
+            -- handled by the delegated engine (see jsCode), which dispatches
+            -- to the Lua event listener registered above
+            local action, target
             if tile.Page ~= nil then
-                local page = tostring(tile.Page)
-                onclick = function() editor.navigate(page) end
+                action = "page"
+                target = tostring(tile.Page)
             else
-                local command = tostring(tile.Command)
-                onclick = function() editor.invokeCommand(command) end
+                action = "command"
+                target = tostring(tile.Command)
             end
-            local elSpec = {
-                class = "dash-tile dash-btn-tile",
-                onclick = onclick,
-                tostring(tile.Label or "?"),
-            }
-            local style = styleString(tile)
-            if style ~= "" then elSpec.style = style end
-            tileEl = dom.div(elSpec)
+            tileHtml = '<div class="dash-tile dash-btn-tile"' ..
+                ' data-action="' .. action .. '"' ..
+                ' data-target="' .. escapeHtml(target) .. '"' ..
+                ' style="' .. styleString(tile) .. '">' ..
+                escapeHtml(tile.Label or "?") ..
+                '</div>'
+            tileCount = tileCount + 1
         elseif tile.Content ~= nil then
-            -- Text tile: optional title plus markdown content
-            local elSpec = { class = "dash-tile" }
-            local style = styleString(tile)
-            if style ~= "" then elSpec.style = style end
+            -- Text tile: optional title plus markdown content, rendered
+            -- natively by SilverBullet's markdown pipeline
+            local inner = ""
             if tile.Title ~= nil then
-                elSpec[#elSpec + 1] = dom.div { class = "dash-tile-title", tostring(tile.Title) }
+                inner = '<div class="dash-tile-title">' .. escapeHtml(tile.Title) .. '</div>'
             end
-            elSpec[#elSpec + 1] = tostring(tile.Content)
-            tileEl = dom.div(elSpec)
+            inner = inner .. (markdown.markdownToHtml(tostring(tile.Content)) or "")
+            tileHtml = '<div class="dash-tile" style="' .. styleString(tile) .. '">' .. inner .. '</div>'
+            tileCount = tileCount + 1
         end
         -- Tiles with neither Content nor Page/Command are skipped
 
-        if tileEl ~= nil then
-            board.appendChild(tileEl)
-            tileCount = tileCount + 1
+        if tileHtml ~= nil then
+            html = html .. tileHtml
         end
     end
 
     if tileCount == 0 then
-        board.appendChild(dom.div { class = "dash-empty", "No tiles configured." })
+        html = html .. '<div class="dash-empty">No tiles configured.</div>'
     end
+
+    html = html .. '</div>' -- close board
 
     local jsCode = [[
     (function() {
@@ -283,6 +315,7 @@ function Dashboard(options)
         // N same-width columns using greedy shortest-column placement (tile
         // order preserved, Pinterest-style), reacting to widget re-renders
         // via a MutationObserver and to window resizes (column breakpoints).
+        // Also dispatches shortcut-button clicks to the Lua side.
         if (window.dashEngineInstalled) return;
         window.dashEngineInstalled = true;
 
@@ -357,6 +390,20 @@ function Dashboard(options)
                 document.querySelectorAll('.dash-board[data-dash-init]').forEach(relayoutBoard);
             }, 150);
         });
+
+        // Shortcut buttons: dispatch clicks to the Lua event listener
+        document.addEventListener("click", (e) => {
+            const btn = e.target.closest ? e.target.closest('.dash-btn-tile') : null;
+            if (!btn) return;
+            e.preventDefault();
+            const action = btn.dataset.action;
+            const target = btn.dataset.target;
+            if (action && target) {
+                window.dispatchEvent(new CustomEvent("sb-dash-action", {
+                    detail: { action: action, target: target }
+                }));
+            }
+        });
     })();
     ]]
 
@@ -368,7 +415,7 @@ function Dashboard(options)
 
     return widget.new {
         display = "block",
-        html = board
+        html = html
     }
 end
 ```
