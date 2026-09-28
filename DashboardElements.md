@@ -9,36 +9,21 @@ pageDecoration.prefix: "📊 "
 Pinterest-style dashboard tiles: a masonry wall of same-width, variable-height tiles — markdown text tiles and one-click shortcut buttons — to visually organize links and related things next to each other, e.g. on index pages.
 
 ## DEMO WIDGET
-${Dashboard{
-  {"Columns", 3},
-  {"Tiles", {
-    { {"Title", "📌 Quick Links"}, {"Content", [==[
-Shortcuts to the places that matter:
-* [[Library/rammelmueller/KanbanBoard|Kanban Board]]
-* [[Library/rammelmueller/Reminder|Reminder Library]]
-]==]} },
-    { {"Title", "Markdown tiles"}, {"Content", [==[
-Tiles render **any markdown** — lists, links, `code`.
+The tiles below are configured in the `#dash-tile` data blocks at the bottom of this page.
 
-Use the **Color** and **TextColor** pairs with any CSS color.
-]==]}, {"Color", "oklch(0.85 0.08 95)"} },
-    { {"Label", "⏰ Reminder"}, {"Page", "Library/rammelmueller/Reminder"} },
-    { {"Label", "📄 New page from template"}, {"Command", "Page: From Template"} },
-    { {"Title", "Footer"}, {"Content", "Another tile, kept short." },
-      {"Color", "oklch(0.8 0.1 80)"}, {"TextColor", "black"} },
-  }}
-}}
+${Dashboard{{"Columns", 3}}}
 
 ## How it Works
 
-The widget takes a list of tiles and renders them into a masonry layout: tiles flow into same-width columns, each tile keeping its natural (variable) height. Tiles are placed in configuration order into the currently shortest column — a compact, Pinterest-style arrangement that approximates row-major reading order.
+Tiles are written as `#dash-tile` data blocks — fenced code blocks containing YAML — directly on the dashboard page. Each YAML document inside a block is one tile; blocks can appear anywhere on the page, and tiles appear in the order of their documents. The widget queries them from the index and renders them into a masonry layout: tiles flow into same-width columns, each tile keeping its natural (variable) height, placed greedily into the currently shortest column — a compact, Pinterest-style arrangement that approximates row-major reading order.
 
 > **warning** Important
->   * Tile content is rendered once when the widget renders. If you edit the tile configuration, **refresh the widget** to see the changes.
+>   * Tile content is rendered once when the widget renders. If you edit a `#dash-tile` block, refresh the widget to see the changes.
 
 ### ✨ Features
 
-- **Masonry layout** — same-width columns with variable-height tiles, placed greedily into the shortest column in configuration order
+- **Data-block configuration** — tiles as `#dash-tile` YAML blocks on the page; multi-line content via YAML block scalars, no Lua syntax, no escaping rules
+- **Masonry layout** — same-width columns with variable-height tiles, placed greedily into the shortest column in page order
 - **Markdown text tiles** — optional title header plus free markdown content: wiki links, lists, code, everything SilverBullet renders
 - **Shortcut button tiles** — the whole tile is one action: navigate to a page or run a command
 - **Configurable colors** — any CSS background color per tile, with an optional text color override
@@ -50,40 +35,84 @@ The widget takes a list of tiles and renders them into a masonry layout: tiles f
 - Greedy shortest-column placement approximates row-major order — the exact grid position of a tile can differ from strict left-to-right/top-to-bottom placement when tile heights vary
 - The layout engine is installed once per browser session; **engine updates require a page reload** to take effect
 - Tile content is static at render time — there is no interactive filtering or editing of tiles
+- An invalid YAML document silently drops its tile — parse errors surface only in the browser console
 
 ## Setup and Configuration
 
-### Widget Parameters
-
-*   **`{"Columns", N}`**: (Optional) Number of columns on wide screens. Defaults to `3`. Below ~900px the board falls back to 2 columns (capped at the configured count), below ~600px to a single column.
-*   **`{"Tiles", { ... }}`**: The tile list. Each tile is itself a pair list made of the following pairs:
-    *   **`{"Title", "..."}`**: (Optional) Header line for text tiles.
-    *   **`{"Content", [==[ ... ]==]}`**: Markdown content — makes the tile a text tile. Write multi-line content in `[==[ ... ]==]` long strings.
-    *   **`{"Color", "<css color>"}`**: (Optional) Background color — any CSS color value; defaults to the neutral panel background.
-    *   **`{"TextColor", "<css color>"}`**: (Optional) Text color override, useful on dark tile colors.
-    *   **`{"Label", "..."}`**: Button label — makes the tile a button tile.
-    *   **`{"Page", "..."}`**: Navigate to this page when the tile is clicked.
-    *   **`{"Command", "..."}`**: Run this command when the tile is clicked.
-
-A tile with a `Page` or `Command` pair is a button tile; a tile with a `Content` pair is a text tile.
-
-> **note** Use `[==[ ... ]==]` long strings for tile content: plain `[[ ]]` strings would be terminated by `[[WikiLinks]]` inside the content. Use straight ASCII quotes (`"`) only — typographic quotes (`“ ”`, produced by some keyboards and autocorrect features) are invalid Lua and break the widget with `unexpected symbol near` errors.
-
-### Widget example
+### The widget
 
 ```lua
-${Dashboard{
-  {"Columns", 3},
-  {"Tiles", {
-    { {"Title", "Work"}, {"Content", [==[
-Everything work-related:
-* [[work/inbox|Inbox]]
-* [[work/meetings|Meetings]]
-]==]}, {"Color", "oklch(0.85 0.08 95)"} },
-    { {"Label", "⏰ Open Reminders"}, {"Page", "Library/rammelmueller/Reminder"} },
-    { {"Label", "🔍 Search space"}, {"Command", "Search: Space"}, {"Color", "oklch(0.8 0.12 250)"}, {"TextColor", "white"} },
-  }}
-}}
+${Dashboard()}
+```
+
+or with the only widget-level option:
+
+```lua
+${Dashboard{{"Columns", 2}}}
+```
+
+*   **`{"Columns", N}`**: (Optional) Number of columns on wide screens. Defaults to `3`. Below ~900px the board falls back to 2 columns (capped at the configured count), below ~600px to a single column.
+
+### Tiles as `#dash-tile` data blocks
+
+Tiles are fenced code blocks tagged `#dash-tile`, containing YAML. Each YAML document (separated by `---`) is one tile:
+
+| Field | Meaning |
+|---|---|
+| `title` | (Optional) header line for text tiles |
+| `content` | Markdown content — makes the tile a text tile. Write multi-line content as a YAML block scalar (`content: \|`) |
+| `color` | (Optional) any CSS background color (quote values starting with `#`) |
+| `textColor` | (Optional) text color override, useful on dark tile colors |
+| `label` | button label (button tiles) |
+| `link` | navigate to this page when the tile is clicked (button tiles) |
+| `command` | run this command when the tile is clicked (button tiles) |
+
+A tile with a `link` or `command` field is a button tile; a tile with a `content` field is a text tile. The navigation field is called `link` rather than `page` because SilverBullet's indexer reserves `page` for the data block's own location. Quote YAML values that contain `: ` (colon followed by a space) or start with `#`.
+
+Example:
+
+````markdown
+```#dash-tile
+title: Work
+color: oklch(0.85 0.08 95)
+content: |
+  Everything work-related:
+  * [[work/inbox|Inbox]]
+  * [[work/meetings|Meetings]]
+---
+label: Open Kanban
+link: Library/rammelmueller/KanbanBoard
+---
+label: Search space
+command: "Search: Space"
+color: "#a8c8f4"
+textColor: black
+```
+````
+
+Ordering: tiles appear in the order of their YAML documents on the page — move blocks around to reorder. A YAML parse error drops only the affected tile (check the browser console when a tile does not show up).
+
+## DEMO TILES
+
+```#dash-tile
+title: 📌 Quick Links
+content: |
+  Shortcuts to the places that matter:
+  * [[Library/rammelmueller/KanbanBoard|Kanban Board]]
+  * [[Library/rammelmueller/Reminder|Reminder Library]]
+---
+title: Markdown tiles
+color: oklch(0.85 0.08 95)
+content: |
+  Tiles render **any markdown** — lists, links, `code`.
+
+  Use **Color** and **TextColor** with any CSS color.
+---
+label: ⏰ Reminder
+link: Library/rammelmueller/Reminder
+---
+label: 📄 New page from template
+command: "Page: From Template"
 ```
 
 # Implementation
@@ -226,13 +255,11 @@ end
 -- ------------- Main Dashboard Function -------------
 function Dashboard(options)
     local columns = 3
-    local tileSpecs = {}
 
     for _, opt in ipairs(options or {}) do
         if opt[1] == "Columns" then
             columns = math.max(1, math.floor(tonumber(opt[2]) or 3))
         end
-        if opt[1] == "Tiles" then tileSpecs = opt[2] or {} end
     end
 
     -- Style attribute from the Color and TextColor pairs
@@ -247,28 +274,42 @@ function Dashboard(options)
         return style
     end
 
+    -- Tiles come from #dash-tile data blocks on this page: one YAML
+    -- document per tile, ordered by document position. (The navigation
+    -- field is "link" because the indexer reserves "page" for the
+    -- block's own location and overwrites it on the indexed object.)
+    local tileRows = query[[
+        from t = index.tag "dash-tile"
+        where t.page == _CTX.currentPage.name
+        order by t.pos
+    ]]
+
     -- Everything is rendered as a plain HTML string (the same battle-tested
     -- approach as the Kanban board); markdown content is rendered natively
     -- through SilverBullet's markdown pipeline.
     local html = '<div class="dash-board dash-pending" data-columns="' .. tostring(columns) .. '">'
 
     local tileCount = 0
-    for _, spec in ipairs(tileSpecs) do
-        -- Normalize the tile's pair list into a lookup table
-        local tile = {}
-        for _, pair in ipairs(spec) do
-            tile[pair[1]] = pair[2]
-        end
+    for t in tileRows do
+        local tile = {
+            Title = t.title,
+            Content = t.content,
+            Color = t.color,
+            TextColor = t.textColor,
+            Label = t.label,
+            Link = t.link,
+            Command = t.command,
+        }
 
         local tileHtml = nil
-        if tile.Page ~= nil or tile.Command ~= nil then
+        if tile.Link ~= nil or tile.Command ~= nil then
             -- Button tile: rendered with data attributes; the click is
             -- handled by the delegated engine (see jsCode), which dispatches
             -- to the Lua event listener registered above
             local action, target
-            if tile.Page ~= nil then
+            if tile.Link ~= nil then
                 action = "page"
-                target = tostring(tile.Page)
+                target = tostring(tile.Link)
             else
                 action = "command"
                 target = tostring(tile.Command)
@@ -291,7 +332,7 @@ function Dashboard(options)
             tileHtml = '<div class="dash-tile" style="' .. styleString(tile) .. '">' .. inner .. '</div>'
             tileCount = tileCount + 1
         end
-        -- Tiles with neither Content nor Page/Command are skipped
+        -- Tiles with neither Content nor Link/Command are skipped
 
         if tileHtml ~= nil then
             html = html .. tileHtml
