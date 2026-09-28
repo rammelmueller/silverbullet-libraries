@@ -1,6 +1,7 @@
 ---
 tags: meta/template/page
 command: Tile
+suggestedName: "tiles/"
 frontmatter: | 
   tags:
   - dashboard-tile

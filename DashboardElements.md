@@ -94,7 +94,7 @@ The page body below the frontmatter is the tile's markdown content. A tile with 
 
 ### The Tile command
 
-The shipped `TileTemplate` page template registers the **Tile** command: it prompts for a page name (suggested under `tiles/`) and creates a page pre-filled with the tile frontmatter — edit the membership tag when the tile belongs to another dashboard, fill in the `title`, and write the body.
+The shipped `TileTemplate` page template registers the **Tile** command: it prompts for a page name pre-filled with `tiles/` (so tiles group together in the page tree) and creates a page pre-filled with the tile frontmatter — edit the membership tag when the tile belongs to another dashboard, fill in the `title`, and write the body.
 
 # Implementation
 
