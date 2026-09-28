@@ -278,9 +278,12 @@ function Dashboard(options)
     -- document per tile, ordered by document position. (The navigation
     -- field is "link" because the indexer reserves "page" for the
     -- block's own location and overwrites it on the indexed object.)
+    -- The page name is captured in a local and referenced inside the
+    -- query, the same pattern the Std library's widgets.subPages uses.
+    local pageName = editor.getCurrentPage()
     local tileRows = query[[
         from t = index.tag "dash-tile"
-        where t.page == _CTX.currentPage.name
+        where t.page == pageName
         order by t.pos
     ]]
 
