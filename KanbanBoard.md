@@ -254,8 +254,8 @@ taskID: P-17
   width: 110px;
   height: auto;
   margin-bottom: 8px;
-  /* pencil-style line art: strokes use currentColor, so the drawing takes
-     the same muted color as the text */
+  /* pencil-style line art: strokes use currentColor at exactly the same
+     muted color and opacity as the subtitle below */
   color: var(--text-muted);
   opacity: 0.75;
 }
@@ -883,28 +883,47 @@ function KanbanBoard(pageQuery, options)
             html = html .. '</div>' -- close kanban-card
         end
 
-        -- Empty-state placeholder: rendered in every column and hidden via
-        -- CSS while the column has at least one visible card (see the CSS
-        -- section), so it reacts instantly to the snooze and chip toggles
-        html = html .. '<div class="kanban-col-empty">'
-        html = html .. '<svg class="kanban-col-empty-art" viewBox="0 0 220 150" xmlns="http://www.w3.org/2000/svg" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round">'
-        html = html .. '<path d="M50 50 L38 22 L70 36 L78 12 L96 30 L110 8 L124 30 L142 12 L150 36 L182 22 L170 50 C185 75 180 115 155 130 C130 143 90 143 65 130 C40 115 35 75 50 50 Z" stroke-width="3"/>'
-        html = html .. '<path d="M78 62 q9 9 18 0" stroke-width="3"/>'
-        html = html .. '<path d="M124 62 q9 9 18 0" stroke-width="3"/>'
-        html = html .. '<path d="M72 80 C90 94 130 94 148 80" stroke-width="3"/>'
-        html = html .. '<path d="M88 86 L92 92 L96 88" stroke-width="2"/>'
-        html = html .. '<path d="M105 89 L109 95 L113 90" stroke-width="2"/>'
-        html = html .. '<path d="M122 86 L126 92 L130 88" stroke-width="2"/>'
-        html = html .. '<path d="M48 85 C36 92 36 106 50 110" stroke-width="3"/>'
-        html = html .. '<path d="M172 85 C184 92 184 106 170 110" stroke-width="3"/>'
-        html = html .. '<path d="M92 133 L92 141" stroke-width="3"/>'
-        html = html .. '<path d="M128 133 L128 141" stroke-width="3"/>'
-        html = html .. '<path d="M58 70 q-3 9 0 18" stroke-width="2" opacity="0.7"/>'
-        html = html .. '<path d="M162 70 q3 9 0 18" stroke-width="2" opacity="0.7"/>'
-        html = html .. '</svg>'
-        html = html .. '<div class="kanban-col-empty-text">Nothing going on</div>'
-        html = html .. '<div class="kanban-col-empty-sub">Just Gengar passing through.</div>'
-        html = html .. '</div>'
+        -- Empty-state placeholder, only in the first (To Do) column; hidden
+        -- via CSS while the column has at least one visible card (see the
+        -- CSS section), so it reacts instantly to the snooze and chip
+        -- toggles. All strokes use currentColor, i.e. the same muted color
+        -- as the subtitle below.
+        if status == columnOrder[1] then
+            html = html .. '<div class="kanban-col-empty">'
+            html = html .. '<svg class="kanban-col-empty-art" viewBox="0 0 220 150" xmlns="http://www.w3.org/2000/svg" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round">'
+            -- spiky ghost silhouette: ears, back spikes, round body
+            html = html .. '<path d="M52 48 L36 16 L72 34 L84 10 L98 28 L112 6 L126 28 L140 10 L152 34 L188 16 L172 48 C188 72 184 114 158 130 C130 144 88 144 62 128 C38 112 36 72 52 48 Z" stroke-width="3"/>'
+            -- round eyes with pupils
+            html = html .. '<ellipse cx="88" cy="60" rx="6" ry="8" stroke-width="2.5"/>'
+            html = html .. '<ellipse cx="132" cy="60" rx="6" ry="8" stroke-width="2.5"/>'
+            html = html .. '<circle cx="88" cy="62" r="1.6" fill="currentColor" stroke="none"/>'
+            html = html .. '<circle cx="132" cy="62" r="1.6" fill="currentColor" stroke="none"/>'
+            -- wide toothy grin
+            html = html .. '<path d="M64 78 C88 90 132 90 156 78" stroke-width="3"/>'
+            html = html .. '<path d="M64 78 C90 122 130 122 156 78" stroke-width="3"/>'
+            html = html .. '<path d="M78 82 L78 91" stroke-width="2"/>'
+            html = html .. '<path d="M92 86 L92 99" stroke-width="2"/>'
+            html = html .. '<path d="M108 89 L108 105" stroke-width="2"/>'
+            html = html .. '<path d="M124 86 L124 99" stroke-width="2"/>'
+            html = html .. '<path d="M138 82 L138 91" stroke-width="2"/>'
+            -- clawed arms reaching out
+            html = html .. '<path d="M56 82 C40 74 28 80 24 94" stroke-width="3"/>'
+            html = html .. '<circle cx="24" cy="99" r="5" stroke-width="2.5"/>'
+            html = html .. '<path d="M20 96 L14 93 M21 99 L14 99 M20 102 L15 106" stroke-width="2"/>'
+            html = html .. '<path d="M164 82 C180 74 192 80 196 94" stroke-width="3"/>'
+            html = html .. '<circle cx="196" cy="99" r="5" stroke-width="2.5"/>'
+            html = html .. '<path d="M200 96 L206 93 M199 99 L206 99 M200 102 L205 106" stroke-width="2"/>'
+            -- stubby legs
+            html = html .. '<path d="M92 136 L92 145" stroke-width="3"/>'
+            html = html .. '<path d="M126 136 L126 145" stroke-width="3"/>'
+            -- pencil hatching
+            html = html .. '<path d="M58 70 q-3 9 0 18" stroke-width="2"/>'
+            html = html .. '<path d="M162 70 q3 9 0 18" stroke-width="2"/>'
+            html = html .. '</svg>'
+            html = html .. '<div class="kanban-col-empty-text">Nothing going on</div>'
+            html = html .. '<div class="kanban-col-empty-sub">Just Gengar passing through.</div>'
+            html = html .. '</div>'
+        end
 
         html = html .. '</div></div>' -- close kanban-cards + kanban-column
     end
