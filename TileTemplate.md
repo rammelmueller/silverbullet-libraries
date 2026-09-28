@@ -1,7 +1,6 @@
 ---
 tags: meta/template/page
 command: Tile
-suggestedName: "tiles/${os.date('%Y-%m-%d/%H-%M-%S')}"
 frontmatter: | 
   tags:
   - dashboard-tile
