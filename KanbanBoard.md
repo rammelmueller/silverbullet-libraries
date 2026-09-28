@@ -238,7 +238,7 @@ taskID: P-17
   padding: 16px 8px;
   box-sizing: border-box;
   /* ink just a bit darker than the column background, in both themes */
-  color: oklch(from var(--modal-help-background-color) calc(l - 0.1) c h);
+  color: oklch(from var(--modal-help-background-color) calc(l - 0.14) c h);
   font-style: italic;
   text-align: center;
 }
