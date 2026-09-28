@@ -35,6 +35,7 @@ Create new tiles with the **Tile** command (the page template shipped with this 
 - **Tile command** — the shipped page template creates pre-filled tile pages
 - **Masonry layout** — same-width columns with variable-height tiles, placed greedily into the shortest column in `order` sequence
 - **Markdown text tiles** — optional title header plus the page body as content
+- **Edit shortcut** — every tile carries a small ✎ in its lower right corner that opens the tile page
 - **Shortcut button tiles** — the whole tile is one action: navigate to a page or run a command
 - **Configurable colors** — any CSS background color per tile, with an optional text color override
 - **Responsive breakpoints** — the configured column count applies on wide screens and is automatically reduced on narrow ones; the layout re-flows on window resize
@@ -144,6 +145,7 @@ The shipped `TileTemplate` page template registers the **Tile** command: it prom
 .dash-tile {
   width: 100%;
   box-sizing: border-box;
+  position: relative;
   background: oklch(from var(--modal-help-background-color) l c h / 0.4);
   border-radius: 10px;
   padding: 12px;
@@ -176,6 +178,26 @@ The shipped `TileTemplate` page template registers the **Tile** command: it prom
 
 .dash-btn-tile:active {
   filter: brightness(0.95);
+}
+
+/* Small edit link in the tile's lower right corner */
+.dash-edit-btn {
+  position: absolute;
+  bottom: 2px;
+  right: 4px;
+  font-size: 13px;
+  cursor: pointer;
+  opacity: 0.35;
+  padding: 3px 5px;
+  z-index: 1;
+  line-height: normal;
+  text-decoration-line: none;
+  color: inherit;
+  transition: opacity 0.2s;
+}
+
+.dash-edit-btn:hover {
+  opacity: 1;
 }
 
 
@@ -316,6 +338,12 @@ function Dashboard(options)
         end)
 
         for _, tile in ipairs(tiles) do
+            -- Small edit link in the tile's lower right corner, navigating
+            -- to the tile page (plain anchor — no click plumbing needed)
+            local editLink = '<a class="dash-edit-btn" draggable="false" href="/' ..
+                escapeHtml(tile.Name) .. '" data-ref="/' .. escapeHtml(tile.Name) ..
+                '" title="Edit tile">✎</a>'
+
             local tileHtml = nil
             if tile.Link ~= nil or tile.Command ~= nil then
                 -- Button tile: rendered with data attributes; the click is
@@ -334,6 +362,7 @@ function Dashboard(options)
                     ' data-target="' .. escapeHtml(target) .. '"' ..
                     ' style="' .. styleString(tile) .. '">' ..
                     escapeHtml(tile.Label or tile.Name or "?") ..
+                    editLink ..
                     '</div>'
                 tileCount = tileCount + 1
             elseif tile.Body ~= nil and tile.Body:match("%S") ~= nil then
@@ -344,7 +373,7 @@ function Dashboard(options)
                     inner = '<div class="dash-tile-title">' .. escapeHtml(tile.Title) .. '</div>'
                 end
                 inner = inner .. (markdown.markdownToHtml(tile.Body) or "")
-                tileHtml = '<div class="dash-tile" style="' .. styleString(tile) .. '">' .. inner .. '</div>'
+                tileHtml = '<div class="dash-tile" style="' .. styleString(tile) .. '">' .. inner .. editLink .. '</div>'
                 tileCount = tileCount + 1
             end
             -- Tiles with neither a body nor Link/Command are skipped
@@ -443,10 +472,13 @@ function Dashboard(options)
             }, 150);
         });
 
-        // Shortcut buttons: dispatch clicks to the Lua event listener
+        // Shortcut buttons: dispatch clicks to the Lua event listener.
+        // The edit link inside a button tile navigates on its own and must
+        // not trigger the tile action.
         document.addEventListener("click", (e) => {
             const btn = e.target.closest ? e.target.closest('.dash-btn-tile') : null;
             if (!btn) return;
+            if (e.target.closest('.dash-edit-btn')) return;
             e.preventDefault();
             const action = btn.dataset.action;
             const target = btn.dataset.target;
