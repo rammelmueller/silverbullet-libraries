@@ -41,7 +41,7 @@ You can define the columns and their corresponding status values in the widget's
 - **Drag & drop** — move cards between columns; the status attribute is updated directly in the page's frontmatter, creating a frontmatter block if the page has none yet
 - **Tag filter** — restrict the board to pages carrying all of the given frontmatter tags (`Tags` option)
 - **Tag chips** — every tag found on the board's pages (except the `Tags`-option tags and tags carried by *all* pages) appears as a toggleable chip in the top bar; switch one off to hide all pages carrying it
-- **Add tasks inline** — a greyed-out `+` card at the end of each column prompts for a task name and creates the page under `tasks/`, tagged `task` plus the board's `Tags`, with the clicked column's status
+- **Add tasks inline** — a greyed-out `+` card at the end of each column prompts for a task name and creates the page under `tasks/` from the shipped `TaskTemplate` (`${...}` placeholders like dates are resolved), merged with the clicked column's status and tagged `task` plus the board's `Tags`
 - **Customisable columns** — define your own workflow stages with labels, emoji, and optional accent colours per column
 - **Custom card fields** — choose which frontmatter attributes are shown on each card (`Fields`)
 - **Short card names** — cards display only the file name (the part after the last `/` of the page name, e.g. `task/buy-milk` shows as `buy-milk`); links still open the full page
@@ -57,7 +57,7 @@ You can define the columns and their corresponding status values in the widget's
 - Tags for the `Tags` filter must live in **frontmatter** (`tags: kanban, project`); hashtags in the page body are not considered
 - Manual frontmatter edits to a page require a widget refresh to appear on the board
 - Status values are matched case-insensitively; pages without a `status` start in the first column, while pages with a status that matches no configured column (e.g. `status: done` on a board without a done column) are not shown at all
-- The `+` add card always creates pages under the `tasks/` prefix and always writes the `task` tag alongside the board's `Tags` — boards whose queries use different conventions need the handler adjusted
+- The `+` add card creates pages from the shipped `TaskTemplate` (installed as `Library/rammelmueller/TaskTemplate`): its frontmatter fields (`urgency`, `snoozeDate`, `creationDate`, …) become part of every new task, with the clicked column's status and the `task` tag plus the board's `Tags` merged in. The `tasks/` prefix comes from the template's `suggestedName`; boards with other query conventions need the handler or template adjusted
 - Status values are written as plain YAML scalars (`status: done`) and are only quoted when a plain scalar would be ambiguous
 
 ## Setup and Configuration
@@ -515,6 +515,15 @@ end
 -- Global add-task handler, redefined on every library evaluation so library
 -- updates apply to live sessions without a page reload. The listener
 -- registered below is a thin, stable shim that dispatches to this global.
+-- Global add-task handler, redefined on every library evaluation so library
+-- updates apply to live sessions without a page reload. The listener
+-- registered below is a thin, stable shim that dispatches to this global.
+--
+-- New task pages are created from the shipped TaskTemplate page template:
+-- its frontmatter block is rendered with ${...} interpolation (the same
+-- machinery Std's page-template commands use), then the clicked column's
+-- status and the board's tags are merged into the result. When the template
+-- page is missing, a minimal frontmatter is built instead.
 function kanbanHandleAdd(detail)
     if detail == nil or detail.status == nil then return end
     local statusKey = tostring(detail.statusKey or "status")
@@ -531,8 +540,7 @@ function kanbanHandleAdd(detail)
         return
     end
 
-    -- Fresh frontmatter: the clicked column's status plus the task tag and
-    -- the board's Tags, as an explicit dash list
+    -- Status value with a minimal YAML-quoting guard
     local val = tostring(detail.status)
     local needsQuotes = val == ""
         or val:find("^%s") or val:find("%s$")
@@ -542,14 +550,106 @@ function kanbanHandleAdd(detail)
     if needsQuotes then
         val = '"' .. val:gsub('"', '\\"') .. '"'
     end
-    local lines = { "---", statusKey .. ": " .. val, "tags:", "- task" }
-    if type(detail.tags) == "table" then
-        for _, t in ipairs(detail.tags) do
-            table.insert(lines, "- " .. tostring(t))
+    local statusLine = statusKey .. ": " .. val
+
+    -- Tags the new task must carry: the task tag plus the board's Tags
+    -- option values, deduplicated
+    local addTags = { "task" }
+    do
+        local seen = { task = true }
+        if type(detail.tags) == "table" then
+            for _, t in ipairs(detail.tags) do
+                local tag = tostring(t)
+                if not seen[tag] then
+                    seen[tag] = true
+                    table.insert(addTags, tag)
+                end
+            end
         end
     end
-    table.insert(lines, "---")
-    space.writePage(name, table.concat(lines, "\n") .. "\n")
+
+    local out = {}
+    local statusSet = false
+    local hadTagsKey = false
+    local inTags = false
+    local seenTags = {}
+
+    -- Flush the pending tags list (called when leaving a tags block or at
+    -- its end): append every required tag the template did not carry
+    local function flushTags()
+        if not inTags then return end
+        inTags = false
+        for _, tag in ipairs(addTags) do
+            if not seenTags[tag] then
+                seenTags[tag] = true
+                table.insert(out, "- " .. tag)
+            end
+        end
+    end
+
+    local bodyText = ""
+    local templateName = "Library/rammelmueller/TaskTemplate"
+    local block = nil
+    local bodyFn = nil
+
+    if space.pageExists(templateName) then
+        local tpl, fmOrBlock = template.fromPage(templateName)
+        bodyFn = tpl
+        if type(fmOrBlock) == "string" then
+            block = fmOrBlock
+        elseif type(fmOrBlock) == "table" and type(fmOrBlock.frontmatter) == "string" then
+            block = fmOrBlock.frontmatter
+        end
+    end
+
+    if block ~= nil then
+        -- Render the template's frontmatter block (${...} interpolated),
+        -- then merge status and tags line-wise
+        local rendered = template.new(block)()
+        if type(bodyFn) == "function" then
+            bodyText = bodyFn() or ""
+        end
+        rendered = tostring(rendered or "")
+        if rendered:sub(-1) ~= "\n" then rendered = rendered .. "\n" end
+
+        local statusPattern = "^" .. escapeLuaPattern(statusKey) .. "%s*:"
+        for line in rendered:gmatch("([^\r\n]*)\r?\n") do
+            if line:match(statusPattern) then
+                table.insert(out, statusLine)
+                statusSet = true
+            elseif line:match("^tags%s*:%s*$") then
+                flushTags()
+                inTags = true
+                hadTagsKey = true
+                table.insert(out, line)
+            elseif inTags and line:match("^%-") then
+                seenTags[line:match("^%-%s*(.*)$") or ""] = true
+                table.insert(out, line)
+            else
+                flushTags()
+                table.insert(out, line)
+            end
+        end
+        flushTags()
+    else
+        -- Fallback: no template — minimal frontmatter
+        bodyText = ""
+        table.insert(out, statusLine)
+        statusSet = true
+    end
+
+    if not statusSet then
+        table.insert(out, statusLine)
+    end
+    if not hadTagsKey then
+        -- Guarantee a tags list when the template carried none
+        table.insert(out, "tags:")
+        for _, tag in ipairs(addTags) do
+            table.insert(out, "- " .. tag)
+        end
+    end
+
+    space.writePage(name, "---\n" .. table.concat(out, "\n") .. "\n---\n" .. bodyText)
 
     editor.flashNotification("Task created: " .. name, "info")
     js.window.setTimeout(function()
