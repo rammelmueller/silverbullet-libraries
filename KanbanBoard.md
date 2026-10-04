@@ -523,7 +523,8 @@ function kanbanHandleAdd(detail)
     if name == "" then return end
 
     -- writePage overwrites silently, so refuse to clobber existing pages
-    if space.readPage(name) ~= nil then
+    -- (pageExists, not readPage: reading a missing page throws "Not found")
+    if space.pageExists(name) then
         editor.flashNotification("Page " .. name .. " already exists", "error")
         return
     end
