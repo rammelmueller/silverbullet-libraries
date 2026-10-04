@@ -2,6 +2,8 @@
 name: "Library/rammelmueller/KanbanBoard"
 tags: meta/library
 pageDecoration.prefix: "📋️ "
+files:
+- TaskTemplate.md
 ---
 
 # Kanban Board
