@@ -39,6 +39,7 @@ You can define the columns and their corresponding status values in the widget's
 - **Drag & drop** — move cards between columns; the status attribute is updated directly in the page's frontmatter, creating a frontmatter block if the page has none yet
 - **Tag filter** — restrict the board to pages carrying all of the given frontmatter tags (`Tags` option)
 - **Tag chips** — every tag found on the board's pages (except the `Tags`-option tags and tags carried by *all* pages) appears as a toggleable chip in the top bar; switch one off to hide all pages carrying it
+- **Add tasks inline** — a greyed-out `+` card at the end of each column prompts for a task name and creates the page under `tasks/`, tagged `task` plus the board's `Tags`, with the clicked column's status
 - **Customisable columns** — define your own workflow stages with labels, emoji, and optional accent colours per column
 - **Custom card fields** — choose which frontmatter attributes are shown on each card (`Fields`)
 - **Short card names** — cards display only the file name (the part after the last `/` of the page name, e.g. `task/buy-milk` shows as `buy-milk`); links still open the full page
@@ -54,6 +55,7 @@ You can define the columns and their corresponding status values in the widget's
 - Tags for the `Tags` filter must live in **frontmatter** (`tags: kanban, project`); hashtags in the page body are not considered
 - Manual frontmatter edits to a page require a widget refresh to appear on the board
 - Status values are matched case-insensitively; pages without a `status` start in the first column, while pages with a status that matches no configured column (e.g. `status: done` on a board without a done column) are not shown at all
+- The `+` add card always creates pages under the `tasks/` prefix and always writes the `task` tag alongside the board's `Tags` — boards whose queries use different conventions need the handler adjusted
 - Status values are written as plain YAML scalars (`status: done`) and are only quoted when a plain scalar would be ambiguous
 
 ## Setup and Configuration
@@ -379,6 +381,36 @@ html[data-theme='light'] .kanban-board .kanban-card[data-snoozed="true"] {
 }
 
 /* ---------------------------------
+   Add-Task Ghost Card
+---------------------------------- */
+
+.kanban-add-card {
+  width: 100%;
+  box-sizing: border-box;
+  min-height: 42px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px dashed var(--modal-border-color);
+  border-radius: 10px;
+  background: transparent;
+  color: var(--text-muted);
+  font-size: 20px;
+  line-height: normal;
+  cursor: pointer;
+  opacity: 0.5;
+  transition: all 0.2s;
+  user-select: none;
+}
+
+.kanban-add-card:hover {
+  opacity: 1;
+  color: var(--ui-accent-color);
+  border-color: var(--ui-accent-color);
+}
+
+
+/* ---------------------------------
    Column Card Colors (optional accent color per column)
 ---------------------------------- */
 
@@ -478,6 +510,50 @@ function updatePageFrontmatter(pageName, key, value)
     end, 200)
 end
 
+-- Global add-task handler, redefined on every library evaluation so library
+-- updates apply to live sessions without a page reload. The listener
+-- registered below is a thin, stable shim that dispatches to this global.
+function kanbanHandleAdd(detail)
+    if detail == nil or detail.status == nil then return end
+    local statusKey = tostring(detail.statusKey or "status")
+
+    local name = editor.prompt("Task name", "tasks/")
+    if name == nil then return end
+    name = string.trim(tostring(name))
+    if name == "" then return end
+
+    -- writePage overwrites silently, so refuse to clobber existing pages
+    if space.readPage(name) ~= nil then
+        editor.flashNotification("Page " .. name .. " already exists", "error")
+        return
+    end
+
+    -- Fresh frontmatter: the clicked column's status plus the task tag and
+    -- the board's Tags, as an explicit dash list
+    local val = tostring(detail.status)
+    local needsQuotes = val == ""
+        or val:find("^%s") or val:find("%s$")
+        or val:find(": ") or val:find(":$")
+        or val:find(" #") or val:find("^#")
+        or val:find("^[!&*%[%]{}|>%%%@\"'%-]")
+    if needsQuotes then
+        val = '"' .. val:gsub('"', '\\"') .. '"'
+    end
+    local lines = { "---", statusKey .. ": " .. val, "tags:", "- task" }
+    if type(detail.tags) == "table" then
+        for _, t in ipairs(detail.tags) do
+            table.insert(lines, "- " .. tostring(t))
+        end
+    end
+    table.insert(lines, "---")
+    space.writePage(name, table.concat(lines, "\n") .. "\n")
+
+    editor.flashNotification("Task created: " .. name, "info")
+    js.window.setTimeout(function()
+        codeWidget.refreshAll()  -- Refresh widget after creation
+    end, 200)
+end
+
 -- ------------- Event Listeners -------------
 if not js.window.kanbanListenersAdded then
     js.window.addEventListener("sb-kanban-dnd-update", function(e)
@@ -498,6 +574,10 @@ if not js.window.kanbanListenersAdded then
                 e.detail.value
             )
         end
+    end)
+
+    js.window.addEventListener("sb-kanban-add-task", function(e)
+        kanbanHandleAdd(e.detail)
     end)
     js.window.kanbanListenersAdded = true
 end
@@ -714,6 +794,13 @@ function KanbanBoard(pageQuery, options)
     -- widget's DOM without re-invoking this Lua function.
     local showSnoozed = (js.window._kanbanShowSnoozed == true)
 
+    -- Tags written to new task pages created via the + ghost card: the task
+    -- tag plus the board's Tags option values
+    local addTagsAttr = "task"
+    for _, req in ipairs(requiredTags) do
+        addTagsAttr = addTagsAttr .. "," .. req
+    end
+
     -- Snooze toggle button; its state persists in the browser window so it
     -- survives widget re-renders (e.g. after a drag & drop frontmatter update)
     local snoozeBtnClass = "kanban-snooze-toggle-btn"
@@ -914,6 +1001,13 @@ function KanbanBoard(pageQuery, options)
             html = html .. '<div class="kanban-col-empty-sub">Just Gengar passing through.</div>'
             html = html .. '</div>'
         end
+
+        -- Ghost add card at the end of the column: clicking it dispatches to
+        -- the Lua listener, which prompts for a name and creates the task
+        -- page. Separate class so D&D, counts, chips and the placeholder
+        -- logic all ignore it.
+        html = html .. '<div class="kanban-add-card" data-status="' .. status ..
+            '" data-add-tags="' .. addTagsAttr .. '" title="Add a task to this column">+</div>'
 
         html = html .. '</div></div>' -- close kanban-cards + kanban-column
     end
@@ -1157,6 +1251,25 @@ function KanbanBoard(pageQuery, options)
                 input.style.padding = '4px 6px';
                 input.focus();
             }
+         });
+
+        // Add-task ghost cards: dispatch to the Lua event listener, which
+        // prompts for a task name and creates the page
+        document.addEventListener("click", (e) => {
+            const addCard = e.target.closest ? e.target.closest('.kanban-add-card') : null;
+            if (!addCard) return;
+            e.preventDefault();
+            const root = getRoot(addCard);
+            if (!root) return;
+            const tags = (addCard.dataset.addTags || "").split(",").filter((t) => t.length > 0);
+            window.dispatchEvent(new CustomEvent("sb-kanban-add-task", {
+                detail: {
+                    action: "add",
+                    statusKey: root.dataset.statusKey,
+                    status: addCard.dataset.status,
+                    tags: tags
+                }
+            }));
         });
     })();
     ]]
